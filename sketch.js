@@ -1,6 +1,10 @@
 /**
  * sketch.js
- * Boundary X Teachable Color Machine (Text & UI Fixed)
+ * Boundary X Teachable Color Machine (Box Size Fixed)
+ * Features:
+ * 1. Hybrid ID Mapping
+ * 2. Explicit Start/Stop Control
+ * 3. Bluetooth Integration
  */
 
 // Bluetooth UUIDs
@@ -110,7 +114,6 @@ function createUI() {
   disconnectBluetoothButton.mousePressed(disconnectBluetooth);
 
   // 4. Recognition Control Buttons
-  // (6) 버튼 텍스트 수정
   startRecognitionButton = createButton("컬러 인식 시작");
   startRecognitionButton.parent('recognition-control-buttons');
   startRecognitionButton.addClass('start-button');
@@ -286,7 +289,10 @@ function draw() {
   pop();
 
   video.loadPixels();
-  const boxSize = 20;
+  
+  // [수정] 박스 크기를 20 -> 60으로 확대
+  const boxSize = 60; 
+  
   const cx = video.width / 2;
   const cy = video.height / 2;
   const xStart = Math.floor(cx - boxSize / 2);
@@ -318,6 +324,7 @@ function draw() {
   noFill();
   stroke(255);
   strokeWeight(3);
+  // 화면 중앙에 60px 크기의 박스 그리기
   rect(width/2 - boxSize/2, height/2 - boxSize/2, boxSize, boxSize);
 
   // Draw Color Preview
