@@ -1,4 +1,4 @@
-/* style.css - Boundary X: Color Recognition (Detailed Footer Added) */
+/* style.css - Boundary X: Color Recognition (Scroll Optimized) */
 
 :root {
   /* Palette */
@@ -81,7 +81,7 @@ header {
   color: #000000;
 }
 
-/* Main Layout (PC Default) */
+/* Main Layout */
 main {
   width: 100%;
   max-width: 1200px;
@@ -97,13 +97,13 @@ main {
 /* Canvas Container */
 .canvas-container { 
     width: 100%;
-    max-width: 400px;
+    max-width: 320px; /* [수정] 카메라 크기 축소 (400 -> 320) */
     aspect-ratio: 4/3; 
     border-radius: var(--radius-card);
     overflow: hidden;
     background: #000;
     box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-    position: relative;
+    position: relative; /* Sticky 제거, 기본 흐름 따름 */
     flex-shrink: 0;
 }
 
@@ -362,7 +362,7 @@ button {
   color: var(--success) !important;
 }
 
-/* [추가] 상세 푸터 스타일 */
+/* Footer */
 footer {
   background-color: #000000;
   color: #FFFFFF;
@@ -421,7 +421,6 @@ address {
   color: #666;
 }
 
-/* 푸터 링크 스타일 */
 .footer-links {
   display: flex;
   gap: 4rem;
@@ -483,7 +482,7 @@ address {
   .controls { flex: 1; }
 }
 
-/* --- Mobile Layout (Sticky Camera) --- */
+/* --- Mobile Layout (Compact & Fluid) --- */
 @media (max-width: 767px) {
   main { 
     padding: 1rem 1rem; 
@@ -491,16 +490,12 @@ address {
     overflow: visible; 
   }
 
+  /* Sticky 제거 및 크기 조정 */
   .canvas-container {
-    position: sticky;       
-    top: 70px; 
-    z-index: 50;            
+    position: relative; /* Sticky 제거 */
     width: 100%;            
-    max-width: 400px;
-    height: auto;           
-    aspect-ratio: 4/3;      
-    background: #000;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.2); 
+    max-width: 320px; /* 크기 제한 */
+    margin: 0 auto;   /* 중앙 정렬 */
     margin-bottom: 10px;    
   }
 
