@@ -1,4 +1,4 @@
-/* style.css - Boundary X: Color Recognition (Mobile X Button Compact) */
+/* style.css - Boundary X: Color Recognition (Detailed Footer Added) */
 
 :root {
   /* Palette */
@@ -81,7 +81,7 @@ header {
   color: #000000;
 }
 
-/* Main Layout */
+/* Main Layout (PC Default) */
 main {
   width: 100%;
   max-width: 1200px;
@@ -276,7 +276,6 @@ canvas {
   font-weight: 500;
 }
 
-/* 삭제 버튼 (기본 PC 스타일) */
 .delete-class-btn {
   margin-left: 10px;
   background: none;
@@ -363,7 +362,7 @@ button {
   color: var(--success) !important;
 }
 
-/* Footer */
+/* [추가] 상세 푸터 스타일 */
 footer {
   background-color: #000000;
   color: #FFFFFF;
@@ -422,7 +421,51 @@ address {
   color: #666;
 }
 
-/* --- PC & Tablet Layout (가로 배치) --- */
+/* 푸터 링크 스타일 */
+.footer-links {
+  display: flex;
+  gap: 4rem;
+  flex-wrap: wrap;
+}
+
+.link-column h4 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #FFFFFF;
+  margin-bottom: 1.2rem;
+}
+
+.link-column ul {
+  list-style: none;
+  padding: 0;
+}
+
+.link-column li {
+  margin-bottom: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.link-column a {
+  text-decoration: none;
+  color: #CCCCCC;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.link-column a:hover {
+  color: #FFFFFF;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.link-desc {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+/* --- PC & Tablet Layout --- */
 @media (min-width: 768px) {
   main {
     flex-direction: row;       
@@ -440,7 +483,7 @@ address {
   .controls { flex: 1; }
 }
 
-/* --- Mobile Layout (Sticky Camera + Compact UI) --- */
+/* --- Mobile Layout (Sticky Camera) --- */
 @media (max-width: 767px) {
   main { 
     padding: 1rem 1rem; 
@@ -472,19 +515,13 @@ address {
   button { width: 100%; }
 
   .footer-top { flex-direction: column; gap: 3rem; }
+  .footer-links { gap: 2.5rem; flex-direction: column; }
 
-  /* [수정] 모바일 전용: 삭제 버튼 및 행 스타일 컴팩트하게 */
-  .train-btn-row {
-    padding: 6px 10px; /* 내부 패딩 축소 */
-  }
-
+  .train-btn-row { padding: 6px 10px; }
   .delete-class-btn {
-    font-size: 1.1rem; /* 아이콘 크기 축소 */
-    margin-left: 4px;  /* 왼쪽 여백 축소 */
-    padding: 4px;      /* 터치 영역 확보하되 공간 차지 축소 */
+    font-size: 1.1rem;
+    margin-left: 4px;
+    padding: 4px;
   }
-
-  .train-btn {
-    padding: 10px;     /* 학습 버튼 내부 패딩 축소 */
-  }
+  .train-btn { padding: 10px; }
 }
