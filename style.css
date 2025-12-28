@@ -1,4 +1,4 @@
-/* style.css - Boundary X: Color Recognition (Sticky Mobile Fixed) */
+/* style.css - Boundary X: Color Recognition (Mobile X Button Compact) */
 
 :root {
   /* Palette */
@@ -45,7 +45,7 @@ header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  position: sticky; /* PC에서도 헤더 고정 */
+  position: sticky;
   top: 0;
   z-index: 100;
   transition: padding 0.3s ease;
@@ -81,7 +81,7 @@ header {
   color: #000000;
 }
 
-/* Main Layout (PC Default) */
+/* Main Layout */
 main {
   width: 100%;
   max-width: 1200px;
@@ -89,12 +89,12 @@ main {
   padding: 3rem 1.5rem;
   flex: 1;
   display: flex;
-  flex-direction: column; /* 기본 컬럼 */
+  flex-direction: column;
   align-items: center;
   gap: 2rem;
 }
 
-/* Canvas Container (PC Default) */
+/* Canvas Container */
 .canvas-container { 
     width: 100%;
     max-width: 400px;
@@ -159,7 +159,7 @@ canvas {
 
 .ai-confidence {
   text-align: center;
-  font-size: 1.2rem; /* 폰트 키움 */
+  font-size: 1.2rem;
   font-weight: 700;
   color: #333;
   margin-bottom: 5px;
@@ -169,7 +169,7 @@ canvas {
   background-color: #FFFFFF;
   border: 1px solid var(--border-color);
   border-radius: 12px;
-  padding: 0.8rem; /* 패딩 축소 */
+  padding: 0.8rem;
   margin-bottom: 1rem;
   text-align: center;
 }
@@ -276,6 +276,7 @@ canvas {
   font-weight: 500;
 }
 
+/* 삭제 버튼 (기본 PC 스타일) */
 .delete-class-btn {
   margin-left: 10px;
   background: none;
@@ -439,18 +440,17 @@ address {
   .controls { flex: 1; }
 }
 
-/* --- Mobile Layout (Sticky Camera) --- */
+/* --- Mobile Layout (Sticky Camera + Compact UI) --- */
 @media (max-width: 767px) {
   main { 
     padding: 1rem 1rem; 
     gap: 1.5rem;
-    overflow: visible; /* 스크롤 허용 */
+    overflow: visible; 
   }
 
-  /* [핵심] 모바일 카메라 고정 */
   .canvas-container {
     position: sticky;       
-    top: 70px; /* 헤더 아래에 고정 */
+    top: 70px; 
     z-index: 50;            
     width: 100%;            
     max-width: 400px;
@@ -472,4 +472,19 @@ address {
   button { width: 100%; }
 
   .footer-top { flex-direction: column; gap: 3rem; }
+
+  /* [수정] 모바일 전용: 삭제 버튼 및 행 스타일 컴팩트하게 */
+  .train-btn-row {
+    padding: 6px 10px; /* 내부 패딩 축소 */
+  }
+
+  .delete-class-btn {
+    font-size: 1.1rem; /* 아이콘 크기 축소 */
+    margin-left: 4px;  /* 왼쪽 여백 축소 */
+    padding: 4px;      /* 터치 영역 확보하되 공간 차지 축소 */
+  }
+
+  .train-btn {
+    padding: 10px;     /* 학습 버튼 내부 패딩 축소 */
+  }
 }
