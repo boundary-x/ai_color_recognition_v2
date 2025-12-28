@@ -341,4 +341,42 @@ async function connectBluetooth() {
 
 function disconnectBluetooth() {
   if (bluetoothDevice && bluetoothDevice.gatt.connected) {
-    bluetoothDevice
+    bluetoothDevice.gatt.disconnect();
+  }
+  isConnected = false;
+  bluetoothStatus = "연결 해제됨";
+  rxCharacteristic = null;
+  txCharacteristic = null;
+  bluetoothDevice = null;
+  updateBluetoothStatusUI(false);
+}
+
+function updateBluetoothStatusUI(connected = false, error = false) {
+  const statusElement = select('#bluetoothStatus');
+  if(statusElement) {
+      statusElement.html(`상태: ${bluetoothStatus}`);
+      statusElement.removeClass('status-connected');
+      statusElement.removeClass('status-error');
+      
+      if (connected) {
+        statusElement.addClass('status-connected');
+      } else if (error) {
+        statusElement.addClass('status-error');
+      }
+  }
+}
+
+async function sendBluetoothData(data) {
+  if (!rxCharacteristic || !isConnected) return;
+  if (isSendingData) return;
+
+  try {
+    isSendingData = true;
+    const encoder = new TextEncoder();
+    await rxCharacteristic.writeValue(encoder.encode(data + "\n"));
+  } catch (error) {
+    console.error("Error sending data:", error);
+  } finally {
+    isSendingData = false;
+  }
+}
