@@ -1,7 +1,6 @@
 /**
  * sketch.js
- * Boundary X Teachable Color Machine (Final)
- * Features: Smart ID Map, Sticky Camera, Stop Command
+ * Boundary X Teachable Color Machine
  */
 
 // Bluetooth UUIDs
@@ -70,7 +69,6 @@ function stopVideo() {
 }
 
 function createUI() {
-  // DOM Selectors
   classInput = select('#class-input');
   addClassBtn = select('#add-class-btn');
   classListContainer = select('#class-list');
@@ -80,7 +78,6 @@ function createUI() {
   resultConfidence = select('#result-confidence');
   btDataDisplay = select('#bluetooth-data-display');
 
-  // Input Events
   addClassBtn.mousePressed(addNewClass);
   classInput.elt.addEventListener("keypress", (e) => {
       if (e.key === "Enter") addNewClass();
@@ -88,7 +85,6 @@ function createUI() {
   
   resetBtn.mousePressed(resetModel);
 
-  // 1. Camera Buttons
   flipButton = createButton("좌우 반전");
   flipButton.parent('camera-control-buttons');
   flipButton.addClass('start-button');
@@ -99,7 +95,6 @@ function createUI() {
   switchCameraButton.addClass('start-button');
   switchCameraButton.mousePressed(switchCamera);
 
-  // 2. Bluetooth Buttons
   connectBluetoothButton = createButton("기기 연결");
   connectBluetoothButton.parent('bluetooth-control-buttons');
   connectBluetoothButton.addClass('start-button');
@@ -110,7 +105,6 @@ function createUI() {
   disconnectBluetoothButton.addClass('stop-button');
   disconnectBluetoothButton.mousePressed(disconnectBluetooth);
 
-  // 4. Recognition Control Buttons
   startRecognitionButton = createButton("컬러 인식 시작");
   startRecognitionButton.parent('recognition-control-buttons');
   startRecognitionButton.addClass('start-button');
@@ -124,8 +118,6 @@ function createUI() {
   updateBluetoothStatusUI();
 }
 
-// === Logic: Class Management ===
-
 function addNewClass() {
     const className = classInput.value().trim();
     if (className === "") {
@@ -136,12 +128,10 @@ function addNewClass() {
     const currentId = String(nextClassId++);
     idToNameMap[currentId] = className; 
 
-    // UI Row
     const row = createDiv('');
     row.addClass('train-btn-row');
     row.parent(classListContainer);
 
-    // Train Button
     const trainBtn = createButton(
         `<span class="id-badge">ID ${currentId}</span>
          <span class="train-text">${className}</span>`
@@ -149,19 +139,16 @@ function addNewClass() {
     trainBtn.addClass('train-btn');
     trainBtn.parent(row);
     
-    // Count Badge
     const countBadge = createSpan('0 data');
     countBadge.addClass('train-count');
     countBadge.parent(trainBtn);
 
     trainBtn.mousePressed(() => {
         addExample(currentId); 
-        // Click animation
         trainBtn.style('background', '#e0e0e0');
         setTimeout(() => trainBtn.style('background', '#f8f9fa'), 100);
     });
 
-    // Delete Button
     const delBtn = createButton('×');
     delBtn.addClass('delete-class-btn');
     delBtn.parent(row);
@@ -207,8 +194,6 @@ function resetModel() {
     }
 }
 
-// === Logic: Classification Control ===
-
 function startClassify() {
     if (knnClassifier.getNumLabels() <= 0) {
         alert("먼저 학습 데이터를 추가해주세요!");
@@ -216,17 +201,15 @@ function startClassify() {
     }
     if (!isPredicting) {
         isPredicting = true;
-        classify(); // Loop start
+        classify(); 
     }
 }
 
 function stopClassify() {
     isPredicting = false;
-    
     resultLabel.html("중지됨");
     resultLabel.style('color', '#666');
     resultConfidence.html("");
-    
     sendBluetoothData("stop");
     btDataDisplay.html("전송됨: stop");
     btDataDisplay.style('color', '#EA4335');
@@ -235,7 +218,6 @@ function stopClassify() {
 function classify() {
     if (!isPredicting) return;
     if (knnClassifier.getNumLabels() <= 0) return;
-
     knnClassifier.classify(currentRGB, gotResults);
 }
 
@@ -269,8 +251,6 @@ function gotResults(error, result) {
     }
 }
 
-// === P5 Draw Loop ===
-
 function draw() {
   background(0);
 
@@ -291,9 +271,7 @@ function draw() {
 
   video.loadPixels();
   
-  // 박스 크기 60px
   const boxSize = 60; 
-  
   const cx = video.width / 2;
   const cy = video.height / 2;
   const xStart = Math.floor(cx - boxSize / 2);
@@ -321,13 +299,11 @@ function draw() {
       ];
   }
 
-  // Draw Box
   noFill();
   stroke(255);
   strokeWeight(3);
   rect(width/2 - boxSize/2, height/2 - boxSize/2, boxSize, boxSize);
 
-  // Draw Color Preview
   fill(currentRGB[0], currentRGB[1], currentRGB[2]);
   stroke(255);
   strokeWeight(2);
@@ -339,8 +315,6 @@ function switchCamera() {
   facingMode = facingMode === "user" ? "environment" : "user";
   setTimeout(setupCamera, 500);
 }
-
-/* --- Bluetooth Logic --- */
 
 async function connectBluetooth() {
   try {
@@ -367,42 +341,4 @@ async function connectBluetooth() {
 
 function disconnectBluetooth() {
   if (bluetoothDevice && bluetoothDevice.gatt.connected) {
-    bluetoothDevice.gatt.disconnect();
-  }
-  isConnected = false;
-  bluetoothStatus = "연결 해제됨";
-  rxCharacteristic = null;
-  txCharacteristic = null;
-  bluetoothDevice = null;
-  updateBluetoothStatusUI(false);
-}
-
-function updateBluetoothStatusUI(connected = false, error = false) {
-  const statusElement = select('#bluetoothStatus');
-  if(statusElement) {
-      statusElement.html(`상태: ${bluetoothStatus}`);
-      statusElement.removeClass('status-connected');
-      statusElement.removeClass('status-error');
-      
-      if (connected) {
-        statusElement.addClass('status-connected');
-      } else if (error) {
-        statusElement.addClass('status-error');
-      }
-  }
-}
-
-async function sendBluetoothData(data) {
-  if (!rxCharacteristic || !isConnected) return;
-  if (isSendingData) return;
-
-  try {
-    isSendingData = true;
-    const encoder = new TextEncoder();
-    await rxCharacteristic.writeValue(encoder.encode(data + "\n"));
-  } catch (error) {
-    console.error("Error sending data:", error);
-  } finally {
-    isSendingData = false;
-  }
-}
+    bluetoothDevice
