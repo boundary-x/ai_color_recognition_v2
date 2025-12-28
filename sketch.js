@@ -1,10 +1,6 @@
 /**
  * sketch.js
- * Boundary X Teachable Color Machine (Control Card Added)
- * Features:
- * 1. Hybrid ID Mapping
- * 2. Explicit Start/Stop Control
- * 3. Bluetooth Integration
+ * Boundary X Teachable Color Machine (Text & UI Fixed)
  */
 
 // Bluetooth UUIDs
@@ -23,7 +19,7 @@ let isSendingData = false;
 let video;
 let knnClassifier;
 let currentRGB = [0, 0, 0];
-let isPredicting = false; // 현재 추론 중인지 여부
+let isPredicting = false; 
 
 // ID Mapping System
 let nextClassId = 1; 
@@ -33,7 +29,7 @@ let idToNameMap = {};
 let classInput, addClassBtn, classListContainer, resetBtn;
 let resultLabel, resultConfidence, btDataDisplay;
 let flipButton, switchCameraButton, connectBluetoothButton, disconnectBluetoothButton;
-let startRecognitionButton, stopRecognitionButton; // [NEW] 제어 버튼
+let startRecognitionButton, stopRecognitionButton; 
 
 // Camera
 let facingMode = "user";
@@ -113,8 +109,9 @@ function createUI() {
   disconnectBluetoothButton.addClass('stop-button');
   disconnectBluetoothButton.mousePressed(disconnectBluetooth);
 
-  // 4. Recognition Control Buttons [NEW]
-  startRecognitionButton = createButton("인식 시작");
+  // 4. Recognition Control Buttons
+  // (6) 버튼 텍스트 수정
+  startRecognitionButton = createButton("컬러 인식 시작");
   startRecognitionButton.parent('recognition-control-buttons');
   startRecognitionButton.addClass('start-button');
   startRecognitionButton.mousePressed(startClassify);
@@ -205,7 +202,7 @@ function resetModel() {
         resultConfidence.html("");
         btDataDisplay.html("전송 데이터: 대기 중...");
         
-        stopClassify(); // 데이터가 없으면 추론도 중지
+        stopClassify(); 
     }
 }
 
