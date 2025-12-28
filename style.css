@@ -1,4 +1,4 @@
-/* style.css - Boundary X: Color Recognition (Hybrid UX Fixed) */
+/* style.css - Boundary X: Color Recognition (UI Updated) */
 
 :root {
   /* Palette */
@@ -154,26 +154,34 @@ canvas {
   font-weight: 800;
   color: #000;
   text-align: center;
-  margin: 10px 0;
+  margin: 5px 0; /* 마진 축소 */
 }
 
 .ai-confidence {
   text-align: center;
-  font-size: 0.9rem;
-  color: #666;
-  margin-bottom: 10px;
+  /* (4) 정확도 텍스트 크기 확대 및 강조 */
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 5px;
 }
 
 .data-info-box {
   background-color: #FFFFFF;
   border: 1px solid var(--border-color);
   border-radius: 12px;
-  padding: 1.2rem;
+  /* (3) 박스 높이 줄이기 (패딩 축소) */
+  padding: 0.8rem; 
   margin-bottom: 1rem;
   text-align: center;
 }
 
-/* [NEW] Input Group */
+.info-title {
+  /* 타이틀 마진도 조금 조정 */
+  margin-bottom: 0.5rem !important;
+}
+
+/* Input Group */
 .input-group {
   display: flex;
   gap: 10px;
