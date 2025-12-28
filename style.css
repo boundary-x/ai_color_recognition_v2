@@ -1,4 +1,4 @@
-/* style.css - Boundary X: Color Recognition (Scroll Optimized) */
+/* style.css - Boundary X: Color Recognition (Small Camera Mobile) */
 
 :root {
   /* Palette */
@@ -94,16 +94,16 @@ main {
   gap: 2rem;
 }
 
-/* Canvas Container */
+/* Canvas Container (PC Default) */
 .canvas-container { 
     width: 100%;
-    max-width: 320px; /* [수정] 카메라 크기 축소 (400 -> 320) */
+    max-width: 400px;
     aspect-ratio: 4/3; 
     border-radius: var(--radius-card);
     overflow: hidden;
     background: #000;
     box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-    position: relative; /* Sticky 제거, 기본 흐름 따름 */
+    position: relative;
     flex-shrink: 0;
 }
 
@@ -482,7 +482,7 @@ address {
   .controls { flex: 1; }
 }
 
-/* --- Mobile Layout (Compact & Fluid) --- */
+/* --- Mobile Layout (Small Camera) --- */
 @media (max-width: 767px) {
   main { 
     padding: 1rem 1rem; 
@@ -490,12 +490,12 @@ address {
     overflow: visible; 
   }
 
-  /* Sticky 제거 및 크기 조정 */
   .canvas-container {
-    position: relative; /* Sticky 제거 */
+    position: relative !important; /* 고정 해제 */
+    top: auto !important;          
     width: 100%;            
-    max-width: 320px; /* 크기 제한 */
-    margin: 0 auto;   /* 중앙 정렬 */
+    max-width: 260px; /* [수정] 카메라 크기 축소 (320px -> 260px) */
+    margin: 0 auto;   
     margin-bottom: 10px;    
   }
 
