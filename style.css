@@ -1,4 +1,4 @@
-/* style.css - Boundary X: Color Recognition (Small Camera Mobile) */
+/* style.css - Boundary X: Color Recognition (Mobile UI Compact) */
 
 :root {
   /* Palette */
@@ -94,7 +94,7 @@ main {
   gap: 2rem;
 }
 
-/* Canvas Container (PC Default) */
+/* Canvas Container */
 .canvas-container { 
     width: 100%;
     max-width: 400px;
@@ -482,7 +482,7 @@ address {
   .controls { flex: 1; }
 }
 
-/* --- Mobile Layout (Small Camera) --- */
+/* --- Mobile Layout (Optimization: Small Camera & Compact UI) --- */
 @media (max-width: 767px) {
   main { 
     padding: 1rem 1rem; 
@@ -490,11 +490,12 @@ address {
     overflow: visible; 
   }
 
+  /* 1. 카메라 크기 축소 및 고정 해제 */
   .canvas-container {
-    position: relative !important; /* 고정 해제 */
+    position: relative !important; 
     top: auto !important;          
     width: 100%;            
-    max-width: 260px; /* [수정] 카메라 크기 축소 (320px -> 260px) */
+    max-width: 260px; /* 320px -> 260px로 더 축소 */
     margin: 0 auto;   
     margin-bottom: 10px;    
   }
@@ -512,11 +513,65 @@ address {
   .footer-top { flex-direction: column; gap: 3rem; }
   .footer-links { gap: 2.5rem; flex-direction: column; }
 
-  .train-btn-row { padding: 6px 10px; }
-  .delete-class-btn {
-    font-size: 1.1rem;
-    margin-left: 4px;
-    padding: 4px;
+  /* 2. [추가] 모바일 전용 컴팩트 UI (입력창, 버튼 등) */
+  
+  /* 입력 그룹 간격 및 패딩 축소 */
+  .input-group {
+    gap: 6px;
+    margin-bottom: 10px;
   }
-  .train-btn { padding: 10px; }
+  
+  #class-input {
+    padding: 0.6rem 0.8rem; /* 패딩 축소 */
+    font-size: 0.95rem;     /* 폰트 약간 축소 */
+  }
+  
+  .add-button {
+    padding: 0 1rem;        /* 버튼 너비 축소 */
+    font-size: 0.95rem;
+  }
+
+  /* 리스트 아이템 간격 및 패딩 축소 */
+  .class-list-container {
+    gap: 6px;
+  }
+
+  .train-btn-row {
+    padding: 4px 8px;       /* 행 내부 패딩 축소 */
+  }
+
+  .train-btn {
+    padding: 8px 10px;      /* 학습 버튼 내부 패딩 축소 */
+  }
+
+  /* 내부 요소(ID 뱃지, 텍스트) 축소 */
+  .id-badge {
+    padding: 3px 8px;
+    font-size: 0.85rem;
+    min-width: 45px;
+    margin-right: 8px;
+  }
+
+  .train-text {
+    font-size: 0.95rem;
+  }
+
+  .train-count {
+    font-size: 0.7rem;
+    padding: 2px 6px;
+  }
+
+  /* 삭제 버튼 축소 */
+  .delete-class-btn {
+    font-size: 1.2rem;
+    margin-left: 4px;
+    padding: 0 4px;
+  }
+
+  /* 초기화 버튼 축소 */
+  .reset-button {
+    margin-top: 8px;
+    padding: 0.7rem 1rem;
+    font-size: 0.9rem;
+  }
 }
