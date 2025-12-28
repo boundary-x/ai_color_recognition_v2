@@ -1,11 +1,10 @@
 /**
  * sketch.js
- * Boundary X Teachable Color Machine (Hybrid Name+ID Edition)
+ * Boundary X Teachable Color Machine (Control Card Added)
  * Features:
- * 1. User inputs Name -> System assigns ID
- * 2. KNN Classification on IDs
- * 3. Result Display shows "ID + Name"
- * 4. Bluetooth sends "ID"
+ * 1. Hybrid ID Mapping
+ * 2. Explicit Start/Stop Control
+ * 3. Bluetooth Integration
  */
 
 // Bluetooth UUIDs
@@ -24,16 +23,17 @@ let isSendingData = false;
 let video;
 let knnClassifier;
 let currentRGB = [0, 0, 0];
-let isPredicting = false;
+let isPredicting = false; // 현재 추론 중인지 여부
 
 // ID Mapping System
 let nextClassId = 1; 
-let idToNameMap = {}; // { "1": "사과", "2": "바나나" }
+let idToNameMap = {}; 
 
 // DOM Elements
 let classInput, addClassBtn, classListContainer, resetBtn;
 let resultLabel, resultConfidence, btDataDisplay;
 let flipButton, switchCameraButton, connectBluetoothButton, disconnectBluetoothButton;
+let startRecognitionButton, stopRecognitionButton; // [NEW] 제어 버튼
 
 // Camera
 let facingMode = "user";
@@ -73,6 +73,7 @@ function stopVideo() {
 }
 
 function createUI() {
+  // DOM Selectors
   classInput = select('#class-input');
   addClassBtn = select('#add-class-btn');
   classListContainer = select('#class-list');
@@ -82,25 +83,15 @@ function createUI() {
   resultConfidence = select('#result-confidence');
   btDataDisplay = select('#bluetooth-data-display');
 
+  // Input Events
   addClassBtn.mousePressed(addNewClass);
   classInput.elt.addEventListener("keypress", (e) => {
       if (e.key === "Enter") addNewClass();
   });
   
-  resetBtn.mousePressed(() => {
-      if(confirm("모든 학습 데이터를 삭제하시겠습니까?")) {
-          knnClassifier.clearAllLabels();
-          idToNameMap = {};
-          nextClassId = 1;
-          
-          classListContainer.html(''); 
-          resultLabel.html("데이터 없음");
-          resultConfidence.html("");
-          btDataDisplay.html("전송 데이터: 대기 중...");
-      }
-  });
+  resetBtn.mousePressed(resetModel);
 
-  // Buttons
+  // 1. Camera Buttons
   flipButton = createButton("좌우 반전");
   flipButton.parent('camera-control-buttons');
   flipButton.addClass('start-button');
@@ -111,6 +102,7 @@ function createUI() {
   switchCameraButton.addClass('start-button');
   switchCameraButton.mousePressed(switchCamera);
 
+  // 2. Bluetooth Buttons
   connectBluetoothButton = createButton("기기 연결");
   connectBluetoothButton.parent('bluetooth-control-buttons');
   connectBluetoothButton.addClass('start-button');
@@ -121,10 +113,22 @@ function createUI() {
   disconnectBluetoothButton.addClass('stop-button');
   disconnectBluetoothButton.mousePressed(disconnectBluetooth);
 
+  // 4. Recognition Control Buttons [NEW]
+  startRecognitionButton = createButton("인식 시작");
+  startRecognitionButton.parent('recognition-control-buttons');
+  startRecognitionButton.addClass('start-button');
+  startRecognitionButton.mousePressed(startClassify);
+
+  stopRecognitionButton = createButton("인식 중지");
+  stopRecognitionButton.parent('recognition-control-buttons');
+  stopRecognitionButton.addClass('stop-button');
+  stopRecognitionButton.mousePressed(stopClassify);
+
   updateBluetoothStatusUI();
 }
 
-// [핵심] 이름 입력 -> ID 생성 및 UI 표시
+// === Logic: Class Management ===
+
 function addNewClass() {
     const className = classInput.value().trim();
     if (className === "") {
@@ -132,16 +136,15 @@ function addNewClass() {
         return;
     }
 
-    // ID 자동 할당
     const currentId = String(nextClassId++);
-    idToNameMap[currentId] = className; // 매핑 저장
+    idToNameMap[currentId] = className; 
 
-    // UI 생성
+    // UI Row
     const row = createDiv('');
     row.addClass('train-btn-row');
     row.parent(classListContainer);
 
-    // 버튼 텍스트: "ID 1 : 사과"
+    // Train Button
     const trainBtn = createButton(
         `<span class="id-badge">ID ${currentId}</span>
          <span class="train-text">${className}</span>`
@@ -149,20 +152,19 @@ function addNewClass() {
     trainBtn.addClass('train-btn');
     trainBtn.parent(row);
     
-    // 데이터 개수 표시
+    // Count Badge
     const countBadge = createSpan('0 data');
     countBadge.addClass('train-count');
     countBadge.parent(trainBtn);
 
     trainBtn.mousePressed(() => {
-        addExample(currentId); // 실제 학습은 "ID 번호"로 수행
-        
-        // 클릭 효과
+        addExample(currentId); 
+        // Click animation
         trainBtn.style('background', '#e0e0e0');
         setTimeout(() => trainBtn.style('background', '#f8f9fa'), 100);
     });
 
-    // 삭제 버튼
+    // Delete Button
     const delBtn = createButton('×');
     delBtn.addClass('delete-class-btn');
     delBtn.parent(row);
@@ -172,38 +174,66 @@ function addNewClass() {
         }
     });
 
-    classInput.value(''); // 입력창 초기화
+    classInput.value('');
 }
 
-// ID 번호를 라벨로 학습
 function addExample(labelId) {
     if (!currentRGB) return;
-
-    knnClassifier.addExample(currentRGB, labelId); // Label = "1"
-
+    knnClassifier.addExample(currentRGB, labelId);
     updateButtonCount(labelId);
-
-    if (!isPredicting) {
-        classify();
-    }
 }
 
 function updateButtonCount(labelId) {
     const count = knnClassifier.getCountByLabel()[labelId];
-    
-    // UI 업데이트 (ID 뱃지가 포함된 버튼 찾기)
     const buttons = document.querySelectorAll('.train-btn');
     buttons.forEach(btn => {
-        if (btn.innerHTML.includes(`ID ${labelId}`)) {
+        if (btn.innerText.includes(`ID ${labelId}`)) {
             const badge = btn.querySelector('.train-count');
             if(badge) badge.innerText = `${count} data`;
         }
     });
 }
 
+function resetModel() {
+    if(confirm("모든 학습 데이터를 삭제하시겠습니까?")) {
+        knnClassifier.clearAllLabels();
+        idToNameMap = {};
+        nextClassId = 1;
+        
+        classListContainer.html(''); 
+        resultLabel.html("데이터 없음");
+        resultConfidence.html("");
+        btDataDisplay.html("전송 데이터: 대기 중...");
+        
+        stopClassify(); // 데이터가 없으면 추론도 중지
+    }
+}
+
+// === Logic: Classification Control ===
+
+function startClassify() {
+    if (knnClassifier.getNumLabels() <= 0) {
+        alert("먼저 학습 데이터를 추가해주세요!");
+        return;
+    }
+    if (!isPredicting) {
+        isPredicting = true;
+        classify(); // Loop start
+    }
+}
+
+function stopClassify() {
+    isPredicting = false;
+    resultLabel.html("중지됨");
+    resultLabel.style('color', '#666');
+    sendBluetoothData("stop");
+}
+
 function classify() {
-    isPredicting = true;
+    // Stop flag check
+    if (!isPredicting) return;
     if (knnClassifier.getNumLabels() <= 0) return;
+
     knnClassifier.classify(currentRGB, gotResults);
 }
 
@@ -214,19 +244,16 @@ function gotResults(error, result) {
     }
 
     if (result.confidencesByLabel) {
-        const labelId = result.label; // "1"
+        const labelId = result.label;
         const confidence = result.confidencesByLabel[labelId] * 100;
-        
-        // [핵심] ID를 사용하여 이름(Name)을 찾음
         const name = idToNameMap[labelId] || "알 수 없음";
 
-        // 결과 표시: "ID 1 (사과)"
         resultLabel.html(`ID ${labelId} (${name})`);
         resultLabel.style('color', '#000');
         resultConfidence.html(`정확도: ${confidence.toFixed(0)}%`);
 
-        if (confidence > 60) {
-             sendBluetoothData(labelId); // 전송은 깔끔하게 "1"만
+        if (isPredicting && confidence > 60) {
+             sendBluetoothData(labelId);
              btDataDisplay.html(`전송됨: ${labelId} (${name})`);
              btDataDisplay.style('color', '#0f0');
         } else {
@@ -235,8 +262,13 @@ function gotResults(error, result) {
         }
     }
 
-    classify();
+    // Loop continuation
+    if (isPredicting) {
+        classify(); 
+    }
 }
+
+// === P5 Draw Loop ===
 
 function draw() {
   background(0);
@@ -285,11 +317,13 @@ function draw() {
       ];
   }
 
+  // Draw Box
   noFill();
   stroke(255);
   strokeWeight(3);
   rect(width/2 - boxSize/2, height/2 - boxSize/2, boxSize, boxSize);
 
+  // Draw Color Preview
   fill(currentRGB[0], currentRGB[1], currentRGB[2]);
   stroke(255);
   strokeWeight(2);
@@ -361,7 +395,6 @@ async function sendBluetoothData(data) {
   try {
     isSendingData = true;
     const encoder = new TextEncoder();
-    // 데이터 (숫자 ID) 전송
     await rxCharacteristic.writeValue(encoder.encode(data + "\n"));
   } catch (error) {
     console.error("Error sending data:", error);
