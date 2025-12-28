@@ -1,408 +1,475 @@
-/**
- * sketch.js
- * Boundary X Teachable Color Machine (Box Size Fixed)
- * Features:
- * 1. Hybrid ID Mapping
- * 2. Explicit Start/Stop Control
- * 3. Bluetooth Integration
- */
+/* style.css - Boundary X: Color Recognition (Sticky Mobile Fixed) */
 
-// Bluetooth UUIDs
-const UART_SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
-const UART_TX_CHARACTERISTIC_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
-const UART_RX_CHARACTERISTIC_UUID = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
-
-let bluetoothDevice = null;
-let rxCharacteristic = null;
-let txCharacteristic = null;
-let isConnected = false;
-let bluetoothStatus = "연결 대기 중";
-let isSendingData = false;
-
-// ML Variables
-let video;
-let knnClassifier;
-let currentRGB = [0, 0, 0];
-let isPredicting = false; 
-
-// ID Mapping System
-let nextClassId = 1; 
-let idToNameMap = {}; 
-
-// DOM Elements
-let classInput, addClassBtn, classListContainer, resetBtn;
-let resultLabel, resultConfidence, btDataDisplay;
-let flipButton, switchCameraButton, connectBluetoothButton, disconnectBluetoothButton;
-let startRecognitionButton, stopRecognitionButton; 
-
-// Camera
-let facingMode = "user";
-let isFlipped = false;
-
-function setup() {
-  let canvas = createCanvas(400, 300);
-  canvas.parent('p5-container');
-  canvas.style('border-radius', '16px');
-
-  knnClassifier = ml5.KNNClassifier();
-
-  setupCamera();
-  createUI();
-}
-
-function setupCamera() {
-  let constraints = {
-    video: {
-      facingMode: facingMode
-    },
-    audio: false
-  };
-  video = createCapture(constraints);
-  video.size(400, 300);
-  video.hide();
-}
-
-function stopVideo() {
-    if (video) {
-        if (video.elt.srcObject) {
-            video.elt.srcObject.getTracks().forEach(track => track.stop());
-        }
-        video.remove();
-        video = null;
-    }
-}
-
-function createUI() {
-  // DOM Selectors
-  classInput = select('#class-input');
-  addClassBtn = select('#add-class-btn');
-  classListContainer = select('#class-list');
-  resetBtn = select('#reset-model-btn');
+:root {
+  /* Palette */
+  --primary: #000000;       
+  --primary-hover: #333333; 
+  --accent-grey: #F8F9FA;   
+  --border-color: #D1D5DB;  
   
-  resultLabel = select('#result-label');
-  resultConfidence = select('#result-confidence');
-  btDataDisplay = select('#bluetooth-data-display');
-
-  // Input Events
-  addClassBtn.mousePressed(addNewClass);
-  classInput.elt.addEventListener("keypress", (e) => {
-      if (e.key === "Enter") addNewClass();
-  });
+  --bg-color: #FFFFFF;      
+  --text-main: #111111;     
+  --text-sub: #666666;      
   
-  resetBtn.mousePressed(resetModel);
-
-  // 1. Camera Buttons
-  flipButton = createButton("좌우 반전");
-  flipButton.parent('camera-control-buttons');
-  flipButton.addClass('start-button');
-  flipButton.mousePressed(() => isFlipped = !isFlipped);
-
-  switchCameraButton = createButton("전후방 전환");
-  switchCameraButton.parent('camera-control-buttons');
-  switchCameraButton.addClass('start-button');
-  switchCameraButton.mousePressed(switchCamera);
-
-  // 2. Bluetooth Buttons
-  connectBluetoothButton = createButton("기기 연결");
-  connectBluetoothButton.parent('bluetooth-control-buttons');
-  connectBluetoothButton.addClass('start-button');
-  connectBluetoothButton.mousePressed(connectBluetooth);
-
-  disconnectBluetoothButton = createButton("연결 해제");
-  disconnectBluetoothButton.parent('bluetooth-control-buttons');
-  disconnectBluetoothButton.addClass('stop-button');
-  disconnectBluetoothButton.mousePressed(disconnectBluetooth);
-
-  // 4. Recognition Control Buttons
-  startRecognitionButton = createButton("컬러 인식 시작");
-  startRecognitionButton.parent('recognition-control-buttons');
-  startRecognitionButton.addClass('start-button');
-  startRecognitionButton.mousePressed(startClassify);
-
-  stopRecognitionButton = createButton("인식 중지");
-  stopRecognitionButton.parent('recognition-control-buttons');
-  stopRecognitionButton.addClass('stop-button');
-  stopRecognitionButton.mousePressed(stopClassify);
-
-  updateBluetoothStatusUI();
-}
-
-// === Logic: Class Management ===
-
-function addNewClass() {
-    const className = classInput.value().trim();
-    if (className === "") {
-        alert("이름을 입력해주세요.");
-        return;
-    }
-
-    const currentId = String(nextClassId++);
-    idToNameMap[currentId] = className; 
-
-    // UI Row
-    const row = createDiv('');
-    row.addClass('train-btn-row');
-    row.parent(classListContainer);
-
-    // Train Button
-    const trainBtn = createButton(
-        `<span class="id-badge">ID ${currentId}</span>
-         <span class="train-text">${className}</span>`
-    );
-    trainBtn.addClass('train-btn');
-    trainBtn.parent(row);
-    
-    // Count Badge
-    const countBadge = createSpan('0 data');
-    countBadge.addClass('train-count');
-    countBadge.parent(trainBtn);
-
-    trainBtn.mousePressed(() => {
-        addExample(currentId); 
-        // Click animation
-        trainBtn.style('background', '#e0e0e0');
-        setTimeout(() => trainBtn.style('background', '#f8f9fa'), 100);
-    });
-
-    // Delete Button
-    const delBtn = createButton('×');
-    delBtn.addClass('delete-class-btn');
-    delBtn.parent(row);
-    delBtn.mousePressed(() => {
-        if(confirm(`[ID ${currentId}: ${className}] 버튼을 삭제하시겠습니까?`)) {
-            row.remove();
-        }
-    });
-
-    classInput.value('');
-}
-
-function addExample(labelId) {
-    if (!currentRGB) return;
-    knnClassifier.addExample(currentRGB, labelId);
-    updateButtonCount(labelId);
-}
-
-function updateButtonCount(labelId) {
-    const count = knnClassifier.getCountByLabel()[labelId];
-    const buttons = document.querySelectorAll('.train-btn');
-    buttons.forEach(btn => {
-        if (btn.innerText.includes(`ID ${labelId}`)) {
-            const badge = btn.querySelector('.train-count');
-            if(badge) badge.innerText = `${count} data`;
-        }
-    });
-}
-
-function resetModel() {
-    if(confirm("모든 학습 데이터를 삭제하시겠습니까?")) {
-        knnClassifier.clearAllLabels();
-        idToNameMap = {};
-        nextClassId = 1;
-        
-        classListContainer.html(''); 
-        resultLabel.html("데이터 없음");
-        resultConfidence.html("");
-        btDataDisplay.html("전송 데이터: 대기 중...");
-        
-        stopClassify(); 
-    }
-}
-
-// === Logic: Classification Control ===
-
-function startClassify() {
-    if (knnClassifier.getNumLabels() <= 0) {
-        alert("먼저 학습 데이터를 추가해주세요!");
-        return;
-    }
-    if (!isPredicting) {
-        isPredicting = true;
-        classify(); // Loop start
-    }
-}
-
-function stopClassify() {
-    isPredicting = false;
-    resultLabel.html("중지됨");
-    resultLabel.style('color', '#666');
-    sendBluetoothData("stop");
-}
-
-function classify() {
-    // Stop flag check
-    if (!isPredicting) return;
-    if (knnClassifier.getNumLabels() <= 0) return;
-
-    knnClassifier.classify(currentRGB, gotResults);
-}
-
-function gotResults(error, result) {
-    if (error) {
-        console.error(error);
-        return;
-    }
-
-    if (result.confidencesByLabel) {
-        const labelId = result.label;
-        const confidence = result.confidencesByLabel[labelId] * 100;
-        const name = idToNameMap[labelId] || "알 수 없음";
-
-        resultLabel.html(`ID ${labelId} (${name})`);
-        resultLabel.style('color', '#000');
-        resultConfidence.html(`정확도: ${confidence.toFixed(0)}%`);
-
-        if (isPredicting && confidence > 60) {
-             sendBluetoothData(labelId);
-             btDataDisplay.html(`전송됨: ${labelId} (${name})`);
-             btDataDisplay.style('color', '#0f0');
-        } else {
-             btDataDisplay.html(`전송 대기 (정확도 낮음)`);
-             btDataDisplay.style('color', '#666');
-        }
-    }
-
-    // Loop continuation
-    if (isPredicting) {
-        classify(); 
-    }
-}
-
-// === P5 Draw Loop ===
-
-function draw() {
-  background(0);
-
-  if (!video || !video.width) {
-      fill(255);
-      textAlign(CENTER);
-      text("카메라 로딩 중...", width/2, height/2);
-      return;
-  }
-
-  push();
-  if (isFlipped) {
-    translate(width, 0);
-    scale(-1, 1);
-  }
-  image(video, 0, 0, width, height);
-  pop();
-
-  video.loadPixels();
+  --danger: #EA4335;        
+  --success: #137333;       
   
-  // [수정] 박스 크기를 20 -> 60으로 확대
-  const boxSize = 60; 
+  /* Shapes */
+  --radius-pill: 50px;      
+  --radius-card: 16px;      
   
-  const cx = video.width / 2;
-  const cy = video.height / 2;
-  const xStart = Math.floor(cx - boxSize / 2);
-  const yStart = Math.floor(cy - boxSize / 2);
-
-  let r = 0, g = 0, b = 0, count = 0;
-  
-  for (let x = xStart; x < xStart + boxSize; x++) {
-      for (let y = yStart; y < yStart + boxSize; y++) {
-          let index = (y * video.width + x) * 4;
-          if (index < video.pixels.length - 3) {
-              r += video.pixels[index];
-              g += video.pixels[index + 1];
-              b += video.pixels[index + 2];
-              count++;
-          }
-      }
-  }
-  
-  if (count > 0) {
-      currentRGB = [
-          Math.round(r / count), 
-          Math.round(g / count), 
-          Math.round(b / count)
-      ];
-  }
-
-  // Draw Box
-  noFill();
-  stroke(255);
-  strokeWeight(3);
-  // 화면 중앙에 60px 크기의 박스 그리기
-  rect(width/2 - boxSize/2, height/2 - boxSize/2, boxSize, boxSize);
-
-  // Draw Color Preview
-  fill(currentRGB[0], currentRGB[1], currentRGB[2]);
-  stroke(255);
-  strokeWeight(2);
-  circle(width - 40, height - 40, 50);
+  --font-family: 'Pretendard', -apple-system, sans-serif;
 }
 
-function switchCamera() {
-  stopVideo();
-  facingMode = facingMode === "user" ? "environment" : "user";
-  setTimeout(setupCamera, 500);
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: var(--font-family);
 }
 
-/* --- Bluetooth Logic --- */
-
-async function connectBluetooth() {
-  try {
-    bluetoothDevice = await navigator.bluetooth.requestDevice({
-      filters: [{ namePrefix: "BBC micro:bit" }],
-      optionalServices: [UART_SERVICE_UUID]
-    });
-
-    const server = await bluetoothDevice.gatt.connect();
-    const service = await server.getPrimaryService(UART_SERVICE_UUID);
-    rxCharacteristic = await service.getCharacteristic(UART_RX_CHARACTERISTIC_UUID);
-    txCharacteristic = await service.getCharacteristic(UART_TX_CHARACTERISTIC_UUID);
-
-    isConnected = true;
-    bluetoothStatus = "연결됨: " + bluetoothDevice.name;
-    updateBluetoothStatusUI(true);
-    
-  } catch (error) {
-    console.error("Connection failed", error);
-    bluetoothStatus = "연결 실패";
-    updateBluetoothStatusUI(false, true);
-  }
+body {
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  line-height: 1.6;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
-function disconnectBluetooth() {
-  if (bluetoothDevice && bluetoothDevice.gatt.connected) {
-    bluetoothDevice.gatt.disconnect();
-  }
-  isConnected = false;
-  bluetoothStatus = "연결 해제됨";
-  rxCharacteristic = null;
-  txCharacteristic = null;
-  bluetoothDevice = null;
-  updateBluetoothStatusUI(false);
+/* Header */
+header {
+  background: #000000;
+  border-bottom: 1px solid #333;
+  padding: 1rem 5vw;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky; /* PC에서도 헤더 고정 */
+  top: 0;
+  z-index: 100;
+  transition: padding 0.3s ease;
 }
 
-function updateBluetoothStatusUI(connected = false, error = false) {
-  const statusElement = select('#bluetoothStatus');
-  if(statusElement) {
-      statusElement.html(`상태: ${bluetoothStatus}`);
-      statusElement.removeClass('status-connected');
-      statusElement.removeClass('status-error');
-      
-      if (connected) {
-        statusElement.addClass('status-connected');
-      } else if (error) {
-        statusElement.addClass('status-error');
-      }
-  }
+.title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-async function sendBluetoothData(data) {
-  if (!rxCharacteristic || !isConnected) return;
-  if (isSendingData) return;
+.title img {
+  height: 28px;
+  width: auto;
+}
 
-  try {
-    isSendingData = true;
-    const encoder = new TextEncoder();
-    await rxCharacteristic.writeValue(encoder.encode(data + "\n"));
-  } catch (error) {
-    console.error("Error sending data:", error);
-  } finally {
-    isSendingData = false;
+.back-button {
+  text-decoration: none;
+  color: #FFFFFF;
+  border: 1px solid #FFFFFF;
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 0.5rem 1.2rem;
+  border-radius: var(--radius-pill);
+  transition: all 0.2s;
+}
+
+.back-button:hover {
+  background: #FFFFFF;
+  color: #000000;
+}
+
+/* Main Layout (PC Default) */
+main {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 3rem 1.5rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column; /* 기본 컬럼 */
+  align-items: center;
+  gap: 2rem;
+}
+
+/* Canvas Container (PC Default) */
+.canvas-container { 
+    width: 100%;
+    max-width: 400px;
+    aspect-ratio: 4/3; 
+    border-radius: var(--radius-card);
+    overflow: hidden;
+    background: #000;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    position: relative;
+    flex-shrink: 0;
+}
+
+canvas { 
+    display: block; 
+    width: 100% !important; 
+    height: 100% !important; 
+    object-fit: contain; 
+}
+
+.controls {
+  width: 100%;
+  max-width: 600px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.control-group {
+  background: var(--accent-grey);
+  padding: 2.5rem;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--border-color);
+}
+
+.control-group h3 {
+  background: transparent;
+  color: #000000;
+  border-left: 6px solid #000000;
+  padding-left: 1rem;
+  font-size: 1.3rem;
+  font-weight: 800; 
+  margin-bottom: 1rem;
+  line-height: 1.1;
+  display: flex;
+  align-items: center;
+}
+
+.control-group p {
+  color: var(--text-sub);
+  font-size: 0.95rem;
+  margin-bottom: 1.5rem;
+}
+
+/* AI Result Area */
+.ai-result {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #000;
+  text-align: center;
+  margin: 5px 0;
+}
+
+.ai-confidence {
+  text-align: center;
+  font-size: 1.2rem; /* 폰트 키움 */
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 5px;
+}
+
+.data-info-box {
+  background-color: #FFFFFF;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 0.8rem; /* 패딩 축소 */
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.info-title {
+  margin-bottom: 0.5rem !important;
+}
+
+/* Input Group */
+.input-group {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+#class-input {
+  flex: 1;
+  padding: 0.8rem 1rem;
+  border: 1px solid #D1D5DB;
+  border-radius: 8px;
+  font-size: 1rem;
+  outline: none;
+}
+#class-input:focus {
+  border-color: #000;
+  box-shadow: 0 0 0 2px rgba(0,0,0,0.1);
+}
+
+.add-button {
+  background: #000;
+  color: #fff;
+  border: none;
+  padding: 0 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+.add-button:hover { background: #333; }
+
+.class-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* Train Button Row */
+.train-btn-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fff;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #eee;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.train-btn {
+  flex: 1;
+  background: #f8f9fa;
+  border: 1px solid #ddd;
+  padding: 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+}
+
+.train-btn:hover { background: #e9ecef; }
+.train-btn:active { background: #dee2e6; transform: scale(0.99); }
+
+/* ID Badge & Name */
+.id-badge {
+  background: #000;
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  min-width: 50px;
+  text-align: center;
+  margin-right: 12px;
+}
+
+.train-text {
+  flex: 1;
+  text-align: left;
+  font-size: 1rem;
+  color: #111;
+  font-weight: 600;
+}
+
+.train-count {
+  background: #666;
+  color: #fff;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.delete-class-btn {
+  margin-left: 10px;
+  background: none;
+  border: none;
+  color: #aaa;
+  cursor: pointer;
+  font-size: 1.4rem;
+  padding: 0 5px;
+  line-height: 1;
+}
+.delete-class-btn:hover { color: #EA4335; }
+
+/* Buttons General */
+.button-group {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.sub-group {
+  display: flex;
+  gap: 10px;
+  flex: 1;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.8rem 1.2rem;
+  border-radius: var(--radius-pill);
+  transition: all 0.2s;
+  flex: 1;
+}
+
+.start-button {
+  background-color: var(--primary);
+  color: white;
+}
+.start-button:hover { background-color: var(--primary-hover); }
+
+.stop-button {
+  background-color: white;
+  color: var(--danger);
+  border: 1px solid var(--border-color);
+}
+.stop-button:hover {
+  background-color: #FFF5F5;
+  border-color: var(--danger);
+}
+
+.reset-button {
+  width: 100%;
+  background-color: #EA4335;
+  color: white;
+  border-radius: 8px;
+  margin-top: 10px;
+}
+
+/* Data Display */
+.data-display {
+  font-family: 'Pretendard', sans-serif; 
+  background: #000;
+  color: #0f0;
+  padding: 1.2rem;
+  border-radius: 12px;
+  font-size: 1rem;
+  text-align: center;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+#bluetoothStatus {
+  padding: 1rem;
+  border-radius: 12px;
+  text-align: center;
+  background: #F1F3F4;
+  font-weight: 600;
+}
+
+.status-connected {
+  background-color: #E6F4EA !important;
+  color: var(--success) !important;
+}
+
+/* Footer */
+footer {
+  background-color: #000000;
+  color: #FFFFFF;
+  padding: 4rem 5vw 4rem;
+  border-top: 1px solid #222;
+  margin-top: auto;
+  font-size: 0.9rem;
+}
+
+.footer-container {
+  max-width: 1000px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.footer-top {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4rem;
+}
+
+.footer-info {
+  flex: 1;
+  min-width: 280px;
+  display: flex;
+  flex-direction: column;
+}
+
+.footer-logo {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: #FFFFFF;
+}
+
+.slogan {
+  font-size: 0.95rem;
+  color: #CCCCCC;
+  font-weight: 400;
+  margin-bottom: 1.5rem;
+  line-height: 1.5;
+  word-break: keep-all;
+}
+
+address {
+  font-style: normal;
+  color: #888;
+  line-height: 1.6;
+}
+
+.copyright {
+  margin-top: 0.8rem;
+  font-size: 0.8rem;
+  color: #666;
+}
+
+/* --- PC & Tablet Layout (가로 배치) --- */
+@media (min-width: 768px) {
+  main {
+    flex-direction: row;       
+    align-items: flex-start;   
+    justify-content: center;   
+    gap: 4rem;                 
   }
+
+  .canvas-container {
+    position: sticky; 
+    top: 2rem;        
+    width: 400px;
+  }
+
+  .controls { flex: 1; }
+}
+
+/* --- Mobile Layout (Sticky Camera) --- */
+@media (max-width: 767px) {
+  main { 
+    padding: 1rem 1rem; 
+    gap: 1.5rem;
+    overflow: visible; /* 스크롤 허용 */
+  }
+
+  /* [핵심] 모바일 카메라 고정 */
+  .canvas-container {
+    position: sticky;       
+    top: 70px; /* 헤더 아래에 고정 */
+    z-index: 50;            
+    width: 100%;            
+    max-width: 400px;
+    height: auto;           
+    aspect-ratio: 4/3;      
+    background: #000;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2); 
+    margin-bottom: 10px;    
+  }
+
+  .controls { 
+    width: 100%; 
+    padding-bottom: 3rem; 
+  }
+
+  .control-group { padding: 1.5rem; }
+  .sub-group { flex-direction: column; }
+  .button-group { flex-direction: column; }
+  button { width: 100%; }
+
+  .footer-top { flex-direction: column; gap: 3rem; }
 }
