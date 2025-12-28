@@ -21,7 +21,7 @@
       <a href="https://boundaryx.io">
         <img src="https://raw.githubusercontent.com/boundary-x/ai_voice_recognition/refs/heads/main/boundaryx_logo.png" alt="Logo">
       </a>
-      AI 컬러인식
+      AI 컬러인식 (스마트 ID)
     </div>
     <a href="https://boundaryx.io/59" class="back-button">돌아가기</a>
   </header>
@@ -31,6 +31,20 @@
     
     <section class="controls">
       
+      <div class="control-group">
+        <h3>학습 ID 추가</h3>
+        <p>색상 이름(예: 사과)을 입력하고 추가 버튼을 눌러 학습하세요.</p>
+        
+        <div class="input-group">
+          <input type="text" id="class-input" placeholder="이름 입력 (예: 빨강)">
+          <button id="add-class-btn" class="add-button">추가</button>
+        </div>
+
+        <div id="class-list" class="class-list-container"></div>
+        
+        <button id="reset-model-btn" class="reset-button">🗑️ 모델 초기화</button>
+      </div>
+
       <div class="control-group">
         <h3>🧠 AI 판단 결과</h3>
         <div class="data-info-box">
@@ -55,21 +69,7 @@
       </div>
 
       <div class="control-group">
-        <h3>3. 학습 ID 추가</h3>
-        <p>색상 이름(예: 사과)을 입력하여 ID를 생성하고 학습하세요.</p>
-        
-        <div class="input-group">
-          <input type="text" id="class-input" placeholder="이름 입력 (예: 빨강)">
-          <button id="add-class-btn" class="add-button">추가</button>
-        </div>
-
-        <div id="class-list" class="class-list-container"></div>
-        
-        <button id="reset-model-btn" class="reset-button">🗑️ 모델 초기화</button>
-      </div>
-
-      <div class="control-group">
-        <h3>4. 컬러 인식 제어</h3>
+        <h3>3. 컬러 인식 제어</h3>
         <p>시작 버튼을 눌러 AI 컬러 인식 및 데이터 전송을 시작하세요.</p>
         <div id="recognition-control-buttons" class="button-group"></div>
       </div>
