@@ -1,4 +1,4 @@
-/* style.css - Boundary X: Color Recognition (Mobile UI Compact) */
+/* style.css - Boundary X: Color Recognition (Ultra Compact Mobile) */
 
 :root {
   /* Palette */
@@ -218,7 +218,7 @@ canvas {
   overflow-y: auto;
 }
 
-/* Train Button Row */
+/* Train Button Row (PC Default) */
 .train-btn-row {
   display: flex;
   align-items: center;
@@ -482,7 +482,7 @@ address {
   .controls { flex: 1; }
 }
 
-/* --- Mobile Layout (Optimization: Small Camera & Compact UI) --- */
+/* --- Mobile Layout (Small Camera & Compact UI) --- */
 @media (max-width: 767px) {
   main { 
     padding: 1rem 1rem; 
@@ -490,12 +490,12 @@ address {
     overflow: visible; 
   }
 
-  /* 1. 카메라 크기 축소 및 고정 해제 */
+  /* 1. 카메라 고정 해제 및 크기 축소 */
   .canvas-container {
     position: relative !important; 
     top: auto !important;          
     width: 100%;            
-    max-width: 260px; /* 320px -> 260px로 더 축소 */
+    max-width: 260px; /* 카메라 작게 */
     margin: 0 auto;   
     margin-bottom: 10px;    
   }
@@ -505,7 +505,11 @@ address {
     padding-bottom: 3rem; 
   }
 
-  .control-group { padding: 1.5rem; }
+  /* 카드 내부 여백 축소 */
+  .control-group { 
+    padding: 1.2rem; 
+  }
+  
   .sub-group { flex-direction: column; }
   .button-group { flex-direction: column; }
   button { width: 100%; }
@@ -513,47 +517,54 @@ address {
   .footer-top { flex-direction: column; gap: 3rem; }
   .footer-links { gap: 2.5rem; flex-direction: column; }
 
-  /* 2. [추가] 모바일 전용 컴팩트 UI (입력창, 버튼 등) */
-  
-  /* 입력 그룹 간격 및 패딩 축소 */
+  /* [핵심] 입력창 및 버튼 크기 축소 (높이 40px로 고정) */
   .input-group {
     gap: 6px;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
   }
   
   #class-input {
-    padding: 0.6rem 0.8rem; /* 패딩 축소 */
-    font-size: 0.95rem;     /* 폰트 약간 축소 */
+    padding: 0 10px;
+    height: 40px;      /* 높이 고정 */
+    font-size: 0.95rem;
   }
   
   .add-button {
-    padding: 0 1rem;        /* 버튼 너비 축소 */
+    padding: 0 1rem;
+    height: 40px;      /* 높이 고정 */
     font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
-  /* 리스트 아이템 간격 및 패딩 축소 */
+  /* [핵심] 리스트 행 컴팩트하게 */
   .class-list-container {
     gap: 6px;
   }
 
   .train-btn-row {
-    padding: 4px 8px;       /* 행 내부 패딩 축소 */
+    padding: 4px;      /* 행 내부 여백 최소화 */
+    height: 44px;      /* 행 높이 고정 */
+    gap: 4px;
   }
 
   .train-btn {
-    padding: 8px 10px;      /* 학습 버튼 내부 패딩 축소 */
+    padding: 0 10px;
+    height: 100%;      /* 부모 높이에 맞춤 */
+    font-size: 0.9rem;
   }
 
-  /* 내부 요소(ID 뱃지, 텍스트) 축소 */
+  /* ID 뱃지 축소 */
   .id-badge {
-    padding: 3px 8px;
-    font-size: 0.85rem;
-    min-width: 45px;
-    margin-right: 8px;
+    padding: 2px 6px;
+    font-size: 0.8rem;
+    min-width: 40px;
+    margin-right: 6px;
   }
 
   .train-text {
-    font-size: 0.95rem;
+    font-size: 0.9rem;
   }
 
   .train-count {
@@ -561,14 +572,19 @@ address {
     padding: 2px 6px;
   }
 
-  /* 삭제 버튼 축소 */
+  /* [핵심] 삭제 버튼(X) 너비 강제 축소 */
   .delete-class-btn {
-    font-size: 1.2rem;
-    margin-left: 4px;
-    padding: 0 4px;
+    font-size: 1.4rem;
+    margin-left: 0;
+    padding: 0;
+    width: 32px;        /* 너비 고정 */
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
-  /* 초기화 버튼 축소 */
+  /* 초기화 버튼 */
   .reset-button {
     margin-top: 8px;
     padding: 0.7rem 1rem;
