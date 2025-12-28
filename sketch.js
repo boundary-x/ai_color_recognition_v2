@@ -1,6 +1,7 @@
 /**
  * sketch.js
- * Boundary X Teachable Color Machine
+ * Boundary X Teachable Color Machine (Protocol Updated)
+ * Protocol: I{id}R{rrr}G{ggg}B{bbb} (e.g., I1R255G000B000)
  */
 
 // Bluetooth UUIDs
@@ -69,6 +70,7 @@ function stopVideo() {
 }
 
 function createUI() {
+  // DOM Selectors
   classInput = select('#class-input');
   addClassBtn = select('#add-class-btn');
   classListContainer = select('#class-list');
@@ -78,6 +80,7 @@ function createUI() {
   resultConfidence = select('#result-confidence');
   btDataDisplay = select('#bluetooth-data-display');
 
+  // Input Events
   addClassBtn.mousePressed(addNewClass);
   classInput.elt.addEventListener("keypress", (e) => {
       if (e.key === "Enter") addNewClass();
@@ -85,6 +88,7 @@ function createUI() {
   
   resetBtn.mousePressed(resetModel);
 
+  // 1. Camera Buttons
   flipButton = createButton("좌우 반전");
   flipButton.parent('camera-control-buttons');
   flipButton.addClass('start-button');
@@ -95,6 +99,7 @@ function createUI() {
   switchCameraButton.addClass('start-button');
   switchCameraButton.mousePressed(switchCamera);
 
+  // 2. Bluetooth Buttons
   connectBluetoothButton = createButton("기기 연결");
   connectBluetoothButton.parent('bluetooth-control-buttons');
   connectBluetoothButton.addClass('start-button');
@@ -105,6 +110,7 @@ function createUI() {
   disconnectBluetoothButton.addClass('stop-button');
   disconnectBluetoothButton.mousePressed(disconnectBluetooth);
 
+  // 4. Recognition Control Buttons
   startRecognitionButton = createButton("컬러 인식 시작");
   startRecognitionButton.parent('recognition-control-buttons');
   startRecognitionButton.addClass('start-button');
@@ -117,6 +123,8 @@ function createUI() {
 
   updateBluetoothStatusUI();
 }
+
+// === Logic: Class Management ===
 
 function addNewClass() {
     const className = classInput.value().trim();
@@ -194,6 +202,8 @@ function resetModel() {
     }
 }
 
+// === Logic: Classification Control ===
+
 function startClassify() {
     if (knnClassifier.getNumLabels() <= 0) {
         alert("먼저 학습 데이터를 추가해주세요!");
@@ -207,9 +217,11 @@ function startClassify() {
 
 function stopClassify() {
     isPredicting = false;
+    
     resultLabel.html("중지됨");
     resultLabel.style('color', '#666');
     resultConfidence.html("");
+    
     sendBluetoothData("stop");
     btDataDisplay.html("전송됨: stop");
     btDataDisplay.style('color', '#EA4335');
@@ -218,6 +230,7 @@ function stopClassify() {
 function classify() {
     if (!isPredicting) return;
     if (knnClassifier.getNumLabels() <= 0) return;
+
     knnClassifier.classify(currentRGB, gotResults);
 }
 
@@ -237,8 +250,17 @@ function gotResults(error, result) {
         resultConfidence.html(`정확도: ${confidence.toFixed(0)}%`);
 
         if (isPredicting && confidence > 60) {
-             sendBluetoothData(labelId);
-             btDataDisplay.html(`전송됨: ${labelId} (${name})`);
+             // [핵심] ID와 RGB 데이터를 함께 전송 (I1R255G000B000)
+             let r = String(currentRGB[0]).padStart(3, '0');
+             let g = String(currentRGB[1]).padStart(3, '0');
+             let b = String(currentRGB[2]).padStart(3, '0');
+             
+             let dataToSend = `I${labelId}R${r}G${g}B${b}`;
+             
+             sendBluetoothData(dataToSend);
+             
+             // 화면에는 보기 좋게 띄워쓰기 포함해서 표시
+             btDataDisplay.html(`전송됨: ${dataToSend}`);
              btDataDisplay.style('color', '#0f0');
         } else {
              btDataDisplay.html(`전송 대기 (정확도 낮음)`);
@@ -250,6 +272,8 @@ function gotResults(error, result) {
         classify(); 
     }
 }
+
+// === P5 Draw Loop ===
 
 function draw() {
   background(0);
@@ -315,6 +339,8 @@ function switchCamera() {
   facingMode = facingMode === "user" ? "environment" : "user";
   setTimeout(setupCamera, 500);
 }
+
+/* --- Bluetooth Logic --- */
 
 async function connectBluetooth() {
   try {
