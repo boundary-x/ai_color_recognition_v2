@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="https://raw.githubusercontent.com/boundary-x/ai_teachable_machine/refs/heads/main/Favicon.png"/> 
+  <link rel="X-icon" href="https://raw.githubusercontent.com/boundary-x/ai_teachable_machine/refs/heads/main/Favicon.png"/> 
+  <title>바운더리엑스 컬러인식</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.dom.min.js"></script>
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
+  <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="title">
+      <img src="https://raw.githubusercontent.com/boundary-x/color_recognition/refs/heads/main/boundaryx_logo.png" alt="Logo">
+      컴퓨터비전 컬러인식
+    </div>
+    <a href="https://boundaryx.io/" class="back-button">돌아가기</a>
+  </header>
+  <main>
+    <div id="p5-container" class="canvas-container"></div>
+    <section class="controls">
+      <div class="control-group">
+        <h3>🖥️ 인식된 색상 데이터</h3>
+        <p>감지된 색상 데이터를 확인하세요. 마이크로비트로 전송되는 데이터입니다</p>
+        <div id="colorDisplay" class="data-display">마이크로비트로 전송된 데이터: 없음</div>
+      </div>
+      <div class="control-group">
+        <h3>📷 카메라 설정</h3>
+        <p>☝️STEP1 - 카메라 버튼을 통해 카메라를 설정해주세요</p>
+        <div id="camera-control-buttons" class="button-group"></div>
+      </div>
+      <div class="control-group">
+        <h3>📡 블루투스 연결</h3>
+        <p>✌️STEP2 - 블루투스 연결 버튼을 클릭해 마이크로비트를 연결해주세요</p>
+        <div id="bluetoothStatus" class="status">상태: Disconnected</div>
+        <div id="bluetooth-control-buttons" class="button-group"></div>
+      </div>
+      <div class="control-group">
+        <h3>🎨 색상 감지 제어</h3>
+        <p>👌STEP3 - 색상 감지 시작 버튼을 클릭해 인식을 시작해주세요</p>
+        <div id="object-control-buttons" class="button-group"></div>
+      </div>
+    </section>
+  </main>
+  <footer>
+    <p>ⓒ 2024. boundary X Co. All rights reserved.</p>
+  </footer>
+  <script src="sketch.js"></script>
+  <script>
+    document.querySelector('.back-button').addEventListener('click', () => {
+      window.history.back();
+    });
+  </script>
+</body>
+</html>
