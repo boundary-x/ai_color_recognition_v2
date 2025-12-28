@@ -1,4 +1,4 @@
-/* style.css - Boundary X: Color Recognition (Ultra Compact Mobile) */
+/* style.css - Boundary X: Color Recognition (Final Hard Fix) */
 
 :root {
   /* Palette */
@@ -48,7 +48,6 @@ header {
   position: sticky;
   top: 0;
   z-index: 100;
-  transition: padding 0.3s ease;
 }
 
 .title {
@@ -81,7 +80,7 @@ header {
   color: #000000;
 }
 
-/* Main Layout */
+/* Main Layout (PC Default) */
 main {
   width: 100%;
   max-width: 1200px;
@@ -193,10 +192,6 @@ canvas {
   font-size: 1rem;
   outline: none;
 }
-#class-input:focus {
-  border-color: #000;
-  box-shadow: 0 0 0 2px rgba(0,0,0,0.1);
-}
 
 .add-button {
   background: #000;
@@ -206,9 +201,7 @@ canvas {
   border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
-  transition: background 0.2s;
 }
-.add-button:hover { background: #333; }
 
 .class-list-container {
   display: flex;
@@ -218,7 +211,7 @@ canvas {
   overflow-y: auto;
 }
 
-/* Train Button Row (PC Default) */
+/* Train Button Row (PC) */
 .train-btn-row {
   display: flex;
   align-items: center;
@@ -238,15 +231,11 @@ canvas {
   border-radius: 6px;
   cursor: pointer;
   font-weight: 600;
-  transition: all 0.2s;
   display: flex;
   align-items: center;
 }
 
-.train-btn:hover { background: #e9ecef; }
-.train-btn:active { background: #dee2e6; transform: scale(0.99); }
-
-/* ID Badge & Name */
+/* ID Badge & Name (PC) */
 .id-badge {
   background: #000;
   color: #fff;
@@ -286,7 +275,6 @@ canvas {
   padding: 0 5px;
   line-height: 1;
 }
-.delete-class-btn:hover { color: #EA4335; }
 
 /* Buttons General */
 .button-group {
@@ -308,24 +296,17 @@ button {
   font-weight: 600;
   padding: 0.8rem 1.2rem;
   border-radius: var(--radius-pill);
-  transition: all 0.2s;
-  flex: 1;
 }
 
 .start-button {
   background-color: var(--primary);
   color: white;
 }
-.start-button:hover { background-color: var(--primary-hover); }
 
 .stop-button {
   background-color: white;
   color: var(--danger);
   border: 1px solid var(--border-color);
-}
-.stop-button:hover {
-  background-color: #FFF5F5;
-  border-color: var(--danger);
 }
 
 .reset-button {
@@ -456,7 +437,6 @@ address {
 .link-column a:hover {
   color: #FFFFFF;
   text-decoration: underline;
-  text-underline-offset: 4px;
 }
 
 .link-desc {
@@ -482,112 +462,128 @@ address {
   .controls { flex: 1; }
 }
 
-/* --- Mobile Layout (Small Camera & Compact UI) --- */
+/* --- Mobile Layout (FORCE COMPACT MODE) --- */
 @media (max-width: 767px) {
   main { 
-    padding: 1rem 1rem; 
-    gap: 1.5rem;
-    overflow: visible; 
+    padding: 1rem 1rem !important; 
+    gap: 1rem !important;
+    overflow: visible !important; 
   }
 
-  /* 1. 카메라 고정 해제 및 크기 축소 */
+  /* 1. 카메라: 고정 해제 & 크기 축소 */
   .canvas-container {
     position: relative !important; 
     top: auto !important;          
-    width: 100%;            
-    max-width: 260px; /* 카메라 작게 */
-    margin: 0 auto;   
-    margin-bottom: 10px;    
+    width: 100% !important;            
+    max-width: 260px !important; /* 강력한 너비 제한 */
+    margin: 0 auto !important;   
+    margin-bottom: 10px !important;    
   }
 
   .controls { 
     width: 100%; 
-    padding-bottom: 3rem; 
+    padding-bottom: 2rem; 
   }
 
   /* 카드 내부 여백 축소 */
   .control-group { 
-    padding: 1.2rem; 
+    padding: 1rem !important; 
   }
   
-  .sub-group { flex-direction: column; }
-  .button-group { flex-direction: column; }
-  button { width: 100%; }
+  .sub-group, .button-group { 
+    flex-direction: column !important; 
+  }
+  button { width: 100% !important; }
 
-  .footer-top { flex-direction: column; gap: 3rem; }
-  .footer-links { gap: 2.5rem; flex-direction: column; }
+  .footer-top { flex-direction: column; gap: 2rem; }
+  .footer-links { gap: 2rem; flex-direction: column; }
 
-  /* [핵심] 입력창 및 버튼 크기 축소 (높이 40px로 고정) */
+  /* 2. 입력창 & 버튼 높이 강제 고정 */
   .input-group {
-    gap: 6px;
-    margin-bottom: 8px;
+    gap: 5px !important;
+    margin-bottom: 8px !important;
   }
   
   #class-input {
-    padding: 0 10px;
-    height: 40px;      /* 높이 고정 */
-    font-size: 0.95rem;
+    padding: 0 10px !important;
+    height: 40px !important; /* 높이 고정 */
+    font-size: 14px !important;
   }
   
   .add-button {
-    padding: 0 1rem;
-    height: 40px;      /* 높이 고정 */
-    font-size: 0.95rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    padding: 0 1rem !important;
+    height: 40px !important; /* 높이 고정 */
+    font-size: 14px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
   }
 
-  /* [핵심] 리스트 행 컴팩트하게 */
+  /* 3. [핵심] 리스트 행 컴팩트화 & X 버튼 너비 고정 */
   .class-list-container {
-    gap: 6px;
+    gap: 5px !important;
   }
 
   .train-btn-row {
-    padding: 4px;      /* 행 내부 여백 최소화 */
-    height: 44px;      /* 행 높이 고정 */
-    gap: 4px;
+    padding: 0 !important; /* 패딩 제거 (내부 요소로 대체) */
+    height: 42px !important; /* 행 높이 고정 */
+    border-radius: 6px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0 !important; /* 간격 제거 (flex 제어) */
+    overflow: hidden; /* 삐져나감 방지 */
   }
 
   .train-btn {
-    padding: 0 10px;
-    height: 100%;      /* 부모 높이에 맞춤 */
-    font-size: 0.9rem;
+    flex: 1 !important; /* 남은 공간 차지 */
+    height: 100% !important;
+    padding: 0 10px !important;
+    margin: 0 !important;
+    border: none !important;
+    border-right: 1px solid #eee !important; /* 구분선 */
+    border-radius: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    background: transparent !important;
   }
 
-  /* ID 뱃지 축소 */
+  /* 내부 뱃지 */
   .id-badge {
-    padding: 2px 6px;
-    font-size: 0.8rem;
-    min-width: 40px;
-    margin-right: 6px;
+    padding: 2px 6px !important;
+    font-size: 12px !important;
+    min-width: 35px !important;
+    margin-right: 6px !important;
   }
 
   .train-text {
-    font-size: 0.9rem;
+    font-size: 14px !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .train-count {
-    font-size: 0.7rem;
-    padding: 2px 6px;
+    font-size: 11px !important;
+    padding: 1px 5px !important;
   }
 
-  /* [핵심] 삭제 버튼(X) 너비 강제 축소 */
+  /* [핵심] 삭제 버튼 너비 강제 고정 */
   .delete-class-btn {
-    font-size: 1.4rem;
-    margin-left: 0;
-    padding: 0;
-    width: 32px;        /* 너비 고정 */
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    flex: none !important; /* 늘어나지 않음 */
+    width: 40px !important; /* 너비 고정 */
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 18px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: transparent !important;
   }
 
-  /* 초기화 버튼 */
   .reset-button {
-    margin-top: 8px;
-    padding: 0.7rem 1rem;
-    font-size: 0.9rem;
+    margin-top: 8px !important;
+    padding: 0.6rem !important;
+    font-size: 14px !important;
   }
 }
