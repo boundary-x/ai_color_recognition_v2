@@ -3,6 +3,7 @@
  * Boundary X Teachable Color Machine
  * Supports: Bluetooth (BLE) & USB Serial (Web Serial API)
  * Protocol: I{id}R{rrr}G{ggg}B{bbb} (e.g., I1R255G000B000)
+ * Update: Added Throttling (0.1s interval) to prevent LED flickering
  */
 
 // Bluetooth UUIDs
@@ -18,7 +19,7 @@ let isConnected = false;
 let bluetoothStatus = "연결 대기 중";
 let isSendingData = false;
 
-// [NEW] Serial (USB) Variables
+// Serial (USB) Variables
 let serialPort;
 let serialWriter;
 let isSerialConnected = false;
@@ -30,6 +31,10 @@ let knnClassifier;
 let currentRGB = [0, 0, 0];
 let isPredicting = false; 
 
+// [핵심 수정] 데이터 전송 속도 제한(Throttling) 변수
+let lastSentTime = 0;
+const SEND_INTERVAL = 100; // 100ms (0.1초) 마다 전송
+
 // ID Mapping System
 let nextClassId = 1; 
 let idToNameMap = {}; 
@@ -38,9 +43,8 @@ let idToNameMap = {};
 let classInput, addClassBtn, classListContainer, resetBtn;
 let resultLabel, resultConfidence, btDataDisplay;
 let flipButton, switchCameraButton;
-// Connection Buttons
 let connectBluetoothButton, disconnectBluetoothButton;
-let connectSerialBtn, disconnectSerialBtn; // [NEW]
+let connectSerialBtn, disconnectSerialBtn; 
 let startRecognitionButton, stopRecognitionButton; 
 
 // Camera
@@ -121,7 +125,7 @@ function createUI() {
   disconnectBluetoothButton.addClass('stop-button');
   disconnectBluetoothButton.mousePressed(disconnectBluetooth);
 
-  // [NEW] 3. Serial (USB) Buttons
+  // 3. Serial (USB) Buttons
   connectSerialBtn = createButton("USB 연결 (유선)");
   connectSerialBtn.parent('serial-control-buttons');
   connectSerialBtn.addClass('start-button');
@@ -245,7 +249,6 @@ function stopClassify() {
     resultLabel.style('color', '#666');
     resultConfidence.html("");
     
-    // [MODIFIED] Send STOP to both interfaces
     sendBluetoothData("stop");
     sendSerialData("stop");
     
@@ -260,6 +263,7 @@ function classify() {
     knnClassifier.classify(currentRGB, gotResults);
 }
 
+// [중요 수정] 결과를 처리하고 하드웨어로 전송하는 함수
 function gotResults(error, result) {
     if (error) {
         console.error(error);
@@ -271,24 +275,38 @@ function gotResults(error, result) {
         const confidence = result.confidencesByLabel[labelId] * 100;
         const name = idToNameMap[labelId] || "알 수 없음";
 
+        // 화면 UI는 항상 빠르게 갱신 (반응성 유지)
         resultLabel.html(`ID ${labelId} (${name})`);
         resultLabel.style('color', '#000');
         resultConfidence.html(`정확도: ${confidence.toFixed(0)}%`);
 
+        // 하드웨어 전송은 조건 충족 시에만 수행
         if (isPredicting && confidence > 60) {
-             let r = String(currentRGB[0]).padStart(3, '0');
-             let g = String(currentRGB[1]).padStart(3, '0');
-             let b = String(currentRGB[2]).padStart(3, '0');
              
-             let dataToSend = `I${labelId}R${r}G${g}B${b}`;
+             // [스로틀링 적용] 현재 시간 확인
+             let now = millis();
              
-             // [MODIFIED] Send to both Bluetooth and Serial
-             sendBluetoothData(dataToSend);
-             sendSerialData(dataToSend);
-             
-             btDataDisplay.html(`전송됨: ${dataToSend}`);
-             btDataDisplay.style('color', '#0f0');
+             // 마지막 전송 후 100ms(0.1초)가 지났는지 확인
+             if (now - lastSentTime > SEND_INTERVAL) {
+                 
+                 let r = String(currentRGB[0]).padStart(3, '0');
+                 let g = String(currentRGB[1]).padStart(3, '0');
+                 let b = String(currentRGB[2]).padStart(3, '0');
+                 
+                 let dataToSend = `I${labelId}R${r}G${g}B${b}`;
+                 
+                 // 두 가지 방식 모두 전송
+                 sendBluetoothData(dataToSend);
+                 sendSerialData(dataToSend);
+                 
+                 btDataDisplay.html(`전송됨: ${dataToSend}`);
+                 btDataDisplay.style('color', '#0f0');
+
+                 // 마지막 전송 시간 갱신
+                 lastSentTime = now;
+             }
         } else {
+             // 정확도가 낮으면 전송하지 않음
              btDataDisplay.html(`전송 대기 (정확도 낮음)`);
              btDataDisplay.style('color', '#666');
         }
@@ -439,13 +457,9 @@ async function connectSerial() {
   }
 
   try {
-    // 1. Request Port
     serialPort = await navigator.serial.requestPort();
-    
-    // 2. Open Port (Micro:bit BaudRate 115200)
-    await serialPort.open({ baudRate: 115200 });
+    await serialPort.open({ baudRate: 115200 }); // 마이크로비트 기본 115200
 
-    // 3. Setup Writer
     const textEncoder = new TextEncoderStream();
     const writableStreamClosed = textEncoder.readable.pipeTo(serialPort.writable);
     serialWriter = textEncoder.writable.getWriter();
@@ -490,7 +504,6 @@ function updateSerialStatusUI(connected = false, error = false) {
 async function sendSerialData(data) {
   if (serialWriter && isSerialConnected) {
     try {
-      // Send data with newline
       await serialWriter.write(data + "\n");
     } catch (e) {
       console.error("Serial Write Error:", e);
