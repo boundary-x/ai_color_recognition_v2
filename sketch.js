@@ -327,7 +327,7 @@ async function connectSerial() {
     try {
         serialPort = await navigator.serial.requestPort();
         // 마이크로비트 기본 baudRate: 115200
-        await serialPort.open({ baudRate: 115200 });
+        await serialPort.open({ baudRate: 9600 });
 
         const textEncoder = new TextEncoderStream();
         const writableStreamClosed = textEncoder.readable.pipeTo(serialPort.writable);
@@ -466,3 +466,4 @@ function switchCamera() {
   facingMode = facingMode === "user" ? "environment" : "user";
   setTimeout(setupCamera, 500);
 }
+
