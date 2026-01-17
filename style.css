@@ -1,4 +1,4 @@
-/* style.css - Boundary X: Color Recognition (Logo Resize & Final Fix) */
+/* style.css - Boundary X: Color Recognition (Hybrid & Full Footer) */
 
 :root {
   /* Palette */
@@ -51,7 +51,6 @@ header {
   transition: padding 0.3s ease;
 }
 
-/* [수정] 타이틀 & 로고 기본 스타일 (PC) */
 .title {
   font-size: 1.25rem;
   font-weight: 700;
@@ -59,13 +58,13 @@ header {
   display: flex;
   align-items: center;
   gap: 12px;
-  transition: all 0.3s ease; /* 부드러운 크기 변경 */
+  transition: all 0.3s ease;
 }
 
 .title img {
-  height: 28px; /* PC 기본 높이 */
+  height: 28px;
   width: auto;
-  transition: all 0.3s ease; /* 부드러운 크기 변경 */
+  transition: all 0.3s ease;
 }
 
 .back-button {
@@ -218,7 +217,7 @@ canvas {
   overflow-y: auto;
 }
 
-/* Train Button Row (PC) */
+/* Train Button Row */
 .train-btn-row {
   display: flex;
   align-items: center;
@@ -242,7 +241,6 @@ canvas {
   align-items: center;
 }
 
-/* ID Badge & Name (PC) */
 .id-badge {
   background: #000;
   color: #fff;
@@ -283,7 +281,7 @@ canvas {
   line-height: 1;
 }
 
-/* Buttons General (PC) */
+/* Buttons General */
 .button-group {
   display: flex;
   gap: 12px;
@@ -291,20 +289,14 @@ canvas {
   width: 100%;
 }
 
-.sub-group {
-  display: flex;
-  gap: 10px;
-  flex: 1;
-}
-
 button {
   cursor: pointer;
   border: none;
-  font-size: 0.95rem; /* PC 폰트 */
+  font-size: 0.95rem; 
   font-weight: 600;
   padding: 0.9rem 1.2rem;
   border-radius: var(--radius-pill);
-  flex: 1; /* PC 버튼 꽉 채우기 */
+  flex: 1;
   min-width: 120px;
 }
 
@@ -327,7 +319,7 @@ button {
   margin-top: 10px;
 }
 
-/* Data Display */
+/* Data Display & Status */
 .data-display {
   font-family: 'Pretendard', sans-serif; 
   background: #000;
@@ -340,7 +332,7 @@ button {
   letter-spacing: 0.5px;
 }
 
-#bluetoothStatus {
+.status-box {
   padding: 1rem;
   border-radius: 12px;
   text-align: center;
@@ -353,7 +345,12 @@ button {
   color: var(--success) !important;
 }
 
-/* Footer */
+.status-error {
+  background-color: #FCE8E6 !important;
+  color: var(--danger) !important;
+}
+
+/* Footer (Detailed) */
 footer {
   background-color: #000000;
   color: #FFFFFF;
@@ -481,16 +478,16 @@ address {
     overflow: visible !important; 
   }
 
-  /* [추가] 로고 & 타이틀 사이즈 축소 */
+  /* 로고 & 타이틀 사이즈 축소 */
   .title {
-    font-size: 1rem !important; /* 폰트 줄임 */
+    font-size: 1rem !important;
     gap: 8px !important;
   }
   .title img {
-    height: 22px !important; /* 로고 이미지 줄임 */
+    height: 22px !important;
   }
 
-  /* 1. 카메라 축소 */
+  /* 카메라 축소 */
   .canvas-container {
     position: relative !important; 
     top: auto !important;          
@@ -507,23 +504,16 @@ address {
 
   .control-group { padding: 1rem !important; }
   
-  .sub-group, .button-group { 
-    flex-direction: column !important; 
-  }
-  
-  /* [중요] 기본 버튼은 100% 채움 */
+  /* 버튼 꽉 채움 */
   button { 
     width: 100% !important; 
     flex: none !important; 
   }
-
-  .footer-top { flex-direction: column; gap: 2rem; }
-  .footer-links { gap: 2rem; flex-direction: column; }
-
-  /* 2. 입력창 & 추가 버튼 레이아웃 */
+  
+  /* 입력창 & 추가 버튼 */
   .input-group {
     display: flex !important;
-    flex-wrap: nowrap !important; /* 줄바꿈 금지 */
+    flex-wrap: nowrap !important;
     width: 100% !important;
     gap: 5px !important;
     margin-bottom: 8px !important;
@@ -538,7 +528,6 @@ address {
     font-size: 14px !important;
   }
   
-  /* [핵심] 추가 버튼 크기 자동 */
   .add-button {
     width: auto !important; 
     flex: 0 0 auto !important; 
@@ -550,7 +539,7 @@ address {
     justify-content: center !important;
   }
 
-  /* 3. 리스트 행 컴팩트 */
+  /* 리스트 컴팩트 */
   .class-list-container {
     gap: 5px !important;
   }
@@ -615,4 +604,7 @@ address {
     padding: 0.6rem !important;
     font-size: 14px !important;
   }
+
+  .footer-top { flex-direction: column; gap: 2rem; }
+  .footer-links { gap: 2rem; flex-direction: column; }
 }
