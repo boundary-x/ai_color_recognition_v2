@@ -1,22 +1,18 @@
 /**
  * sketch.js
- * Boundary X Teachable Color Machine (Hybrid: BLE + Serial)
- * Protocol: I{id}R{rrr}G{ggg}B{bbb} (e.g., I1R255G000B000)
+ * Boundary X Teachable Color Machine (Robust Serial Fix)
+ * Baud Rate: 9600 | Method: Direct Write (No Stream)
  */
 
-// --- 1. 통신 변수 (Bluetooth + Serial) ---
-
-// Bluetooth UUIDs
+// === 1. 통신 변수 ===
 const UART_SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
 const UART_TX_CHARACTERISTIC_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
 const UART_RX_CHARACTERISTIC_UUID = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
 
 let bluetoothDevice = null;
 let rxCharacteristic = null;
-let txCharacteristic = null;
 let isConnected = false; // Bluetooth State
 
-// Serial (USB) Variables
 let serialPort = null;
 let serialWriter = null;
 let isSerialConnected = false; // Serial State
@@ -24,13 +20,12 @@ let isSerialConnected = false; // Serial State
 let connectionStatusText = "연결 대기 중";
 let isSendingData = false;
 
-// --- 2. 머신러닝 & 카메라 변수 ---
+// === 2. 머신러닝 변수 ===
 let video;
 let knnClassifier;
 let currentRGB = [0, 0, 0];
 let isPredicting = false; 
 
-// ID Mapping System
 let nextClassId = 1; 
 let idToNameMap = {}; 
 
@@ -40,7 +35,6 @@ let resultLabel, resultConfidence, btDataDisplay;
 let flipButton, switchCameraButton;
 let startRecognitionButton, stopRecognitionButton; 
 
-// Camera Config
 let facingMode = "user";
 let isFlipped = false;
 
@@ -56,12 +50,7 @@ function setup() {
 }
 
 function setupCamera() {
-  let constraints = {
-    video: {
-      facingMode: facingMode
-    },
-    audio: false
-  };
+  let constraints = { video: { facingMode: facingMode }, audio: false };
   video = createCapture(constraints);
   video.size(400, 300);
   video.hide();
@@ -78,7 +67,6 @@ function stopVideo() {
 }
 
 function createUI() {
-  // DOM Selectors
   classInput = select('#class-input');
   addClassBtn = select('#add-class-btn');
   classListContainer = select('#class-list');
@@ -88,7 +76,6 @@ function createUI() {
   resultConfidence = select('#result-confidence');
   btDataDisplay = select('#bluetooth-data-display');
 
-  // Input Events
   addClassBtn.mousePressed(addNewClass);
   classInput.elt.addEventListener("keypress", (e) => {
       if (e.key === "Enter") addNewClass();
@@ -96,7 +83,7 @@ function createUI() {
   
   resetBtn.mousePressed(resetModel);
 
-  // 1. Camera Buttons
+  // Camera Buttons
   flipButton = createButton("좌우 반전");
   flipButton.parent('camera-control-buttons');
   flipButton.addClass('start-button');
@@ -107,15 +94,13 @@ function createUI() {
   switchCameraButton.addClass('start-button');
   switchCameraButton.mousePressed(switchCamera);
 
-  // 2. Connectivity Buttons (Bluetooth)
+  // Connection Buttons
   select('#btn-bt-connect').mousePressed(connectBluetooth);
   select('#btn-bt-disconnect').mousePressed(disconnectBluetooth);
-
-  // 2. Connectivity Buttons (Serial USB)
   select('#btn-serial-connect').mousePressed(connectSerial);
   select('#btn-serial-disconnect').mousePressed(disconnectSerial);
 
-  // 3. Recognition Control Buttons
+  // Recognition Buttons
   startRecognitionButton = createButton("컬러 인식 시작");
   startRecognitionButton.parent('recognition-control-buttons');
   startRecognitionButton.addClass('start-button');
@@ -129,33 +114,22 @@ function createUI() {
   updateStatusUI();
 }
 
-// === Logic: Class Management ===
-
 function addNewClass() {
     const className = classInput.value().trim();
-    if (className === "") {
-        alert("이름을 입력해주세요.");
-        return;
-    }
-
+    if (className === "") { alert("이름을 입력해주세요."); return; }
     const currentId = String(nextClassId++);
     idToNameMap[currentId] = className; 
-
+    
     const row = createDiv('');
     row.addClass('train-btn-row');
     row.parent(classListContainer);
-
-    const trainBtn = createButton(
-        `<span class="id-badge">ID ${currentId}</span>
-         <span class="train-text">${className}</span>`
-    );
+    
+    const trainBtn = createButton(`<span class="id-badge">ID ${currentId}</span><span class="train-text">${className}</span>`);
     trainBtn.addClass('train-btn');
     trainBtn.parent(row);
-    
     const countBadge = createSpan('0 data');
     countBadge.addClass('train-count');
     countBadge.parent(trainBtn);
-
     trainBtn.mousePressed(() => {
         addExample(currentId); 
         trainBtn.style('background', '#e0e0e0');
@@ -165,22 +139,14 @@ function addNewClass() {
     const delBtn = createButton('×');
     delBtn.addClass('delete-class-btn');
     delBtn.parent(row);
-    delBtn.mousePressed(() => {
-        if(confirm(`[ID ${currentId}: ${className}] 버튼을 삭제하시겠습니까?`)) {
-            row.remove();
-        }
-    });
-
+    delBtn.mousePressed(() => { if(confirm(`삭제하시겠습니까?`)) row.remove(); });
     classInput.value('');
 }
 
 function addExample(labelId) {
     if (!currentRGB) return;
     knnClassifier.addExample(currentRGB, labelId);
-    updateButtonCount(labelId);
-}
-
-function updateButtonCount(labelId) {
+    
     const count = knnClassifier.getCountByLabel()[labelId];
     const buttons = document.querySelectorAll('.train-btn');
     buttons.forEach(btn => {
@@ -192,44 +158,26 @@ function updateButtonCount(labelId) {
 }
 
 function resetModel() {
-    if(confirm("모든 학습 데이터를 삭제하시겠습니까?")) {
+    if(confirm("모든 데이터를 삭제하시겠습니까?")) {
         knnClassifier.clearAllLabels();
         idToNameMap = {};
         nextClassId = 1;
-        
         classListContainer.html(''); 
         resultLabel.html("데이터 없음");
-        resultConfidence.html("");
         btDataDisplay.html("전송 데이터: 대기 중...");
-        btDataDisplay.style('color', '#666');
-        
         stopClassify(); 
     }
 }
 
-// === Logic: Classification & Data Sending ===
-
 function startClassify() {
-    if (knnClassifier.getNumLabels() <= 0) {
-        alert("먼저 학습 데이터를 추가해주세요!");
-        return;
-    }
-    if (!isPredicting) {
-        isPredicting = true;
-        classify(); 
-    }
+    if (knnClassifier.getNumLabels() <= 0) { alert("학습 데이터를 추가해주세요!"); return; }
+    if (!isPredicting) { isPredicting = true; classify(); }
 }
 
 function stopClassify() {
     isPredicting = false;
-    
     resultLabel.html("중지됨");
-    resultLabel.style('color', '#666');
-    resultConfidence.html("");
-    
-    // Stop 신호 전송
     sendDataToDevices("stop");
-    
     btDataDisplay.html("전송됨: stop");
     btDataDisplay.style('color', '#EA4335');
 }
@@ -237,15 +185,11 @@ function stopClassify() {
 function classify() {
     if (!isPredicting) return;
     if (knnClassifier.getNumLabels() <= 0) return;
-
     knnClassifier.classify(currentRGB, gotResults);
 }
 
 function gotResults(error, result) {
-    if (error) {
-        console.error(error);
-        return;
-    }
+    if (error) { console.error(error); return; }
 
     if (result.confidencesByLabel) {
         const labelId = result.label;
@@ -253,20 +197,15 @@ function gotResults(error, result) {
         const name = idToNameMap[labelId] || "알 수 없음";
 
         resultLabel.html(`ID ${labelId} (${name})`);
-        resultLabel.style('color', '#000');
         resultConfidence.html(`정확도: ${confidence.toFixed(0)}%`);
 
-        if (isPredicting && confidence > 60) {
-             // [데이터 생성] Protocol: I{id}R{rrr}G{ggg}B{bbb}
+        if (isPredicting && confidence > 70) {
              let r = String(currentRGB[0]).padStart(3, '0');
              let g = String(currentRGB[1]).padStart(3, '0');
              let b = String(currentRGB[2]).padStart(3, '0');
-             
              let dataToSend = `I${labelId}R${r}G${g}B${b}`;
              
-             // [통합 전송] 블루투스 또는 시리얼로 전송
              sendDataToDevices(dataToSend);
-             
              btDataDisplay.html(`전송됨: ${dataToSend}`);
              btDataDisplay.style('color', '#0f0');
         } else {
@@ -274,79 +213,33 @@ function gotResults(error, result) {
              btDataDisplay.style('color', '#666');
         }
     }
-
-    if (isPredicting) {
-        classify(); 
-    }
+    if (isPredicting) classify(); 
 }
 
-// === Unified Connectivity Logic (BLE & Serial) ===
+// === 3. 통신 로직 (Direct Write Fix) ===
 
-// 1. Bluetooth
-async function connectBluetooth() {
-  try {
-    bluetoothDevice = await navigator.bluetooth.requestDevice({
-      filters: [{ namePrefix: "BBC micro:bit" }],
-      optionalServices: [UART_SERVICE_UUID]
-    });
-
-    const server = await bluetoothDevice.gatt.connect();
-    const service = await server.getPrimaryService(UART_SERVICE_UUID);
-    rxCharacteristic = await service.getCharacteristic(UART_RX_CHARACTERISTIC_UUID);
-    txCharacteristic = await service.getCharacteristic(UART_TX_CHARACTERISTIC_UUID);
-
-    isConnected = true;
-    connectionStatusText = "BLE 연결됨: " + bluetoothDevice.name;
-    updateStatusUI(true, false, "ble");
-    
-  } catch (error) {
-    console.error("BLE connection failed", error);
-    connectionStatusText = "BLE 연결 실패";
-    updateStatusUI(false, true);
-  }
-}
-
-function disconnectBluetooth() {
-  if (bluetoothDevice && bluetoothDevice.gatt.connected) {
-    bluetoothDevice.gatt.disconnect();
-  }
-  isConnected = false;
-  rxCharacteristic = null;
-  bluetoothDevice = null;
-  connectionStatusText = "BLE 연결 해제됨";
-  updateStatusUI(false);
-}
-
-// 2. Serial (USB)
 async function connectSerial() {
-    if (!("serial" in navigator)) {
-        alert("이 브라우저는 Web Serial API를 지원하지 않습니다.\nChrome, Edge 브라우저를 사용해주세요.");
-        return;
-    }
-
+    if (!("serial" in navigator)) { alert("Web Serial API 미지원 브라우저입니다."); return; }
     try {
         serialPort = await navigator.serial.requestPort();
-        // 마이크로비트 기본 baudRate: 115200
+        // [중요] 9600 bps 설정
         await serialPort.open({ baudRate: 9600 });
-
-        const textEncoder = new TextEncoderStream();
-        const writableStreamClosed = textEncoder.readable.pipeTo(serialPort.writable);
-        serialWriter = textEncoder.writable.getWriter();
+        // [중요] Raw Writer 직접 사용 (Stream 제거)
+        serialWriter = serialPort.writable.getWriter();
 
         isSerialConnected = true;
-        connectionStatusText = "USB 연결됨";
+        connectionStatusText = "USB 연결됨 (9600)";
         updateStatusUI(true, false, "usb");
-
     } catch (error) {
-        console.error("Serial connection error:", error);
-        connectionStatusText = "USB 연결 실패/취소";
+        console.error("Serial error:", error);
+        connectionStatusText = "USB 연결 실패";
         updateStatusUI(false, true);
     }
 }
 
 async function disconnectSerial() {
     if (serialWriter) {
-        await serialWriter.close();
+        serialWriter.releaseLock(); // Writer 해제
         serialWriter = null;
     }
     if (serialPort) {
@@ -358,107 +251,95 @@ async function disconnectSerial() {
     updateStatusUI(false);
 }
 
-// 3. Unified Sender
-async function sendDataToDevices(data) {
-    const finalData = data + "\n"; // 줄바꿈 추가 (마이크로비트 파싱용)
+async function connectBluetooth() {
+  try {
+    bluetoothDevice = await navigator.bluetooth.requestDevice({
+      filters: [{ namePrefix: "BBC micro:bit" }],
+      optionalServices: [UART_SERVICE_UUID]
+    });
+    const server = await bluetoothDevice.gatt.connect();
+    const service = await server.getPrimaryService(UART_SERVICE_UUID);
+    rxCharacteristic = await service.getCharacteristic(UART_RX_CHARACTERISTIC_UUID);
+    isConnected = true;
+    connectionStatusText = "BLE 연결됨";
+    updateStatusUI(true, false, "ble");
+  } catch (error) {
+    connectionStatusText = "BLE 연결 실패";
+    updateStatusUI(false, true);
+  }
+}
 
-    // Send to Bluetooth
+function disconnectBluetooth() {
+  if (bluetoothDevice && bluetoothDevice.gatt.connected) bluetoothDevice.gatt.disconnect();
+  isConnected = false; rxCharacteristic = null; bluetoothDevice = null;
+  connectionStatusText = "BLE 연결 해제됨";
+  updateStatusUI(false);
+}
+
+// [핵심] 통합 전송 함수 (Direct Write & CRLF)
+async function sendDataToDevices(data) {
+    // 줄바꿈 문자(\r\n)를 반드시 포함
+    const finalData = data + "\r\n";
+
+    // 1. Bluetooth
     if (isConnected && rxCharacteristic && !isSendingData) {
         try {
             isSendingData = true;
-            const encoder = new TextEncoder();
-            await rxCharacteristic.writeValue(encoder.encode(finalData));
-        } catch (error) {
-            console.error("BLE Send Error:", error);
-        } finally {
-            isSendingData = false;
-        }
+            await rxCharacteristic.writeValue(new TextEncoder().encode(finalData));
+        } catch (e) { console.error(e); } 
+        finally { isSendingData = false; }
     }
 
-    // Send to Serial
+    // 2. USB Serial (수정됨)
     if (isSerialConnected && serialWriter) {
         try {
-            await serialWriter.write(finalData);
-        } catch (error) {
-            console.error("Serial Send Error:", error);
-        }
+            // 문자열을 바이트 배열로 변환하여 직접 전송
+            const rawData = new TextEncoder().encode(finalData);
+            await serialWriter.write(rawData);
+        } catch (e) { console.error("Serial Write Error:", e); }
     }
 }
 
-function updateStatusUI(connected = false, error = false, type = "") {
+function updateStatusUI(connected=false, error=false) {
   const statusElement = select('#connectionStatus');
   if(statusElement) {
       statusElement.html(`상태: ${connectionStatusText}`);
       statusElement.removeClass('status-connected');
       statusElement.removeClass('status-error');
-      
-      if (connected) {
-        statusElement.addClass('status-connected');
-      } else if (error) {
-        statusElement.addClass('status-error');
-      }
+      if (connected) statusElement.addClass('status-connected');
+      else if (error) statusElement.addClass('status-error');
   }
 }
 
-// === P5 Draw Loop (Visuals) ===
-
 function draw() {
   background(0);
-
-  if (!video || !video.width) {
-      fill(255);
-      textAlign(CENTER);
-      text("카메라 로딩 중...", width/2, height/2);
-      return;
-  }
+  if (!video || !video.width) return;
 
   push();
-  if (isFlipped) {
-    translate(width, 0);
-    scale(-1, 1);
-  }
+  if (isFlipped) { translate(width, 0); scale(-1, 1); }
   image(video, 0, 0, width, height);
   pop();
 
   video.loadPixels();
-  
   const boxSize = 60; 
-  const cx = video.width / 2;
-  const cy = video.height / 2;
-  const xStart = Math.floor(cx - boxSize / 2);
-  const yStart = Math.floor(cy - boxSize / 2);
-
-  let r = 0, g = 0, b = 0, count = 0;
+  const xStart = Math.floor(video.width/2 - boxSize/2);
+  const yStart = Math.floor(video.height/2 - boxSize/2);
+  let r=0, g=0, b=0, count=0;
   
-  for (let x = xStart; x < xStart + boxSize; x++) {
-      for (let y = yStart; y < yStart + boxSize; y++) {
-          let index = (y * video.width + x) * 4;
-          if (index < video.pixels.length - 3) {
-              r += video.pixels[index];
-              g += video.pixels[index + 1];
-              b += video.pixels[index + 2];
-              count++;
+  for (let x=xStart; x<xStart+boxSize; x++) {
+      for (let y=yStart; y<yStart+boxSize; y++) {
+          let idx = (y*video.width + x)*4;
+          if (idx < video.pixels.length-3) {
+              r+=video.pixels[idx]; g+=video.pixels[idx+1]; b+=video.pixels[idx+2]; count++;
           }
       }
   }
-  
-  if (count > 0) {
-      currentRGB = [
-          Math.round(r / count), 
-          Math.round(g / count), 
-          Math.round(b / count)
-      ];
-  }
+  if (count>0) currentRGB = [Math.round(r/count), Math.round(g/count), Math.round(b/count)];
 
-  noFill();
-  stroke(255);
-  strokeWeight(3);
+  noFill(); stroke(255); strokeWeight(3);
   rect(width/2 - boxSize/2, height/2 - boxSize/2, boxSize, boxSize);
-
   fill(currentRGB[0], currentRGB[1], currentRGB[2]);
-  stroke(255);
-  strokeWeight(2);
-  circle(width - 40, height - 40, 50);
+  stroke(255); circle(width-40, height-40, 50);
 }
 
 function switchCamera() {
@@ -466,4 +347,3 @@ function switchCamera() {
   facingMode = facingMode === "user" ? "environment" : "user";
   setTimeout(setupCamera, 500);
 }
-
