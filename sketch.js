@@ -1,8 +1,10 @@
 /**
  * sketch.js
- * Boundary X Teachable Color Machine (Protocol Updated)
+ * Boundary X Teachable Color Machine (Hybrid: BLE + Serial)
  * Protocol: I{id}R{rrr}G{ggg}B{bbb} (e.g., I1R255G000B000)
  */
+
+// --- 1. 통신 변수 (Bluetooth + Serial) ---
 
 // Bluetooth UUIDs
 const UART_SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
@@ -12,11 +14,17 @@ const UART_RX_CHARACTERISTIC_UUID = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
 let bluetoothDevice = null;
 let rxCharacteristic = null;
 let txCharacteristic = null;
-let isConnected = false;
-let bluetoothStatus = "연결 대기 중";
+let isConnected = false; // Bluetooth State
+
+// Serial (USB) Variables
+let serialPort = null;
+let serialWriter = null;
+let isSerialConnected = false; // Serial State
+
+let connectionStatusText = "연결 대기 중";
 let isSendingData = false;
 
-// ML Variables
+// --- 2. 머신러닝 & 카메라 변수 ---
 let video;
 let knnClassifier;
 let currentRGB = [0, 0, 0];
@@ -29,10 +37,10 @@ let idToNameMap = {};
 // DOM Elements
 let classInput, addClassBtn, classListContainer, resetBtn;
 let resultLabel, resultConfidence, btDataDisplay;
-let flipButton, switchCameraButton, connectBluetoothButton, disconnectBluetoothButton;
+let flipButton, switchCameraButton;
 let startRecognitionButton, stopRecognitionButton; 
 
-// Camera
+// Camera Config
 let facingMode = "user";
 let isFlipped = false;
 
@@ -99,18 +107,15 @@ function createUI() {
   switchCameraButton.addClass('start-button');
   switchCameraButton.mousePressed(switchCamera);
 
-  // 2. Bluetooth Buttons
-  connectBluetoothButton = createButton("기기 연결");
-  connectBluetoothButton.parent('bluetooth-control-buttons');
-  connectBluetoothButton.addClass('start-button');
-  connectBluetoothButton.mousePressed(connectBluetooth);
+  // 2. Connectivity Buttons (Bluetooth)
+  select('#btn-bt-connect').mousePressed(connectBluetooth);
+  select('#btn-bt-disconnect').mousePressed(disconnectBluetooth);
 
-  disconnectBluetoothButton = createButton("연결 해제");
-  disconnectBluetoothButton.parent('bluetooth-control-buttons');
-  disconnectBluetoothButton.addClass('stop-button');
-  disconnectBluetoothButton.mousePressed(disconnectBluetooth);
+  // 2. Connectivity Buttons (Serial USB)
+  select('#btn-serial-connect').mousePressed(connectSerial);
+  select('#btn-serial-disconnect').mousePressed(disconnectSerial);
 
-  // 4. Recognition Control Buttons
+  // 3. Recognition Control Buttons
   startRecognitionButton = createButton("컬러 인식 시작");
   startRecognitionButton.parent('recognition-control-buttons');
   startRecognitionButton.addClass('start-button');
@@ -121,7 +126,7 @@ function createUI() {
   stopRecognitionButton.addClass('stop-button');
   stopRecognitionButton.mousePressed(stopClassify);
 
-  updateBluetoothStatusUI();
+  updateStatusUI();
 }
 
 // === Logic: Class Management ===
@@ -202,7 +207,7 @@ function resetModel() {
     }
 }
 
-// === Logic: Classification Control ===
+// === Logic: Classification & Data Sending ===
 
 function startClassify() {
     if (knnClassifier.getNumLabels() <= 0) {
@@ -222,7 +227,9 @@ function stopClassify() {
     resultLabel.style('color', '#666');
     resultConfidence.html("");
     
-    sendBluetoothData("stop");
+    // Stop 신호 전송
+    sendDataToDevices("stop");
+    
     btDataDisplay.html("전송됨: stop");
     btDataDisplay.style('color', '#EA4335');
 }
@@ -250,16 +257,16 @@ function gotResults(error, result) {
         resultConfidence.html(`정확도: ${confidence.toFixed(0)}%`);
 
         if (isPredicting && confidence > 60) {
-             // [핵심] ID와 RGB 데이터를 함께 전송 (I1R255G000B000)
+             // [데이터 생성] Protocol: I{id}R{rrr}G{ggg}B{bbb}
              let r = String(currentRGB[0]).padStart(3, '0');
              let g = String(currentRGB[1]).padStart(3, '0');
              let b = String(currentRGB[2]).padStart(3, '0');
              
              let dataToSend = `I${labelId}R${r}G${g}B${b}`;
              
-             sendBluetoothData(dataToSend);
+             // [통합 전송] 블루투스 또는 시리얼로 전송
+             sendDataToDevices(dataToSend);
              
-             // 화면에는 보기 좋게 띄워쓰기 포함해서 표시
              btDataDisplay.html(`전송됨: ${dataToSend}`);
              btDataDisplay.style('color', '#0f0');
         } else {
@@ -273,7 +280,127 @@ function gotResults(error, result) {
     }
 }
 
-// === P5 Draw Loop ===
+// === Unified Connectivity Logic (BLE & Serial) ===
+
+// 1. Bluetooth
+async function connectBluetooth() {
+  try {
+    bluetoothDevice = await navigator.bluetooth.requestDevice({
+      filters: [{ namePrefix: "BBC micro:bit" }],
+      optionalServices: [UART_SERVICE_UUID]
+    });
+
+    const server = await bluetoothDevice.gatt.connect();
+    const service = await server.getPrimaryService(UART_SERVICE_UUID);
+    rxCharacteristic = await service.getCharacteristic(UART_RX_CHARACTERISTIC_UUID);
+    txCharacteristic = await service.getCharacteristic(UART_TX_CHARACTERISTIC_UUID);
+
+    isConnected = true;
+    connectionStatusText = "BLE 연결됨: " + bluetoothDevice.name;
+    updateStatusUI(true, false, "ble");
+    
+  } catch (error) {
+    console.error("BLE connection failed", error);
+    connectionStatusText = "BLE 연결 실패";
+    updateStatusUI(false, true);
+  }
+}
+
+function disconnectBluetooth() {
+  if (bluetoothDevice && bluetoothDevice.gatt.connected) {
+    bluetoothDevice.gatt.disconnect();
+  }
+  isConnected = false;
+  rxCharacteristic = null;
+  bluetoothDevice = null;
+  connectionStatusText = "BLE 연결 해제됨";
+  updateStatusUI(false);
+}
+
+// 2. Serial (USB)
+async function connectSerial() {
+    if (!("serial" in navigator)) {
+        alert("이 브라우저는 Web Serial API를 지원하지 않습니다.\nChrome, Edge 브라우저를 사용해주세요.");
+        return;
+    }
+
+    try {
+        serialPort = await navigator.serial.requestPort();
+        // 마이크로비트 기본 baudRate: 115200
+        await serialPort.open({ baudRate: 115200 });
+
+        const textEncoder = new TextEncoderStream();
+        const writableStreamClosed = textEncoder.readable.pipeTo(serialPort.writable);
+        serialWriter = textEncoder.writable.getWriter();
+
+        isSerialConnected = true;
+        connectionStatusText = "USB 연결됨";
+        updateStatusUI(true, false, "usb");
+
+    } catch (error) {
+        console.error("Serial connection error:", error);
+        connectionStatusText = "USB 연결 실패/취소";
+        updateStatusUI(false, true);
+    }
+}
+
+async function disconnectSerial() {
+    if (serialWriter) {
+        await serialWriter.close();
+        serialWriter = null;
+    }
+    if (serialPort) {
+        await serialPort.close();
+        serialPort = null;
+    }
+    isSerialConnected = false;
+    connectionStatusText = "USB 연결 해제됨";
+    updateStatusUI(false);
+}
+
+// 3. Unified Sender
+async function sendDataToDevices(data) {
+    const finalData = data + "\n"; // 줄바꿈 추가 (마이크로비트 파싱용)
+
+    // Send to Bluetooth
+    if (isConnected && rxCharacteristic && !isSendingData) {
+        try {
+            isSendingData = true;
+            const encoder = new TextEncoder();
+            await rxCharacteristic.writeValue(encoder.encode(finalData));
+        } catch (error) {
+            console.error("BLE Send Error:", error);
+        } finally {
+            isSendingData = false;
+        }
+    }
+
+    // Send to Serial
+    if (isSerialConnected && serialWriter) {
+        try {
+            await serialWriter.write(finalData);
+        } catch (error) {
+            console.error("Serial Send Error:", error);
+        }
+    }
+}
+
+function updateStatusUI(connected = false, error = false, type = "") {
+  const statusElement = select('#connectionStatus');
+  if(statusElement) {
+      statusElement.html(`상태: ${connectionStatusText}`);
+      statusElement.removeClass('status-connected');
+      statusElement.removeClass('status-error');
+      
+      if (connected) {
+        statusElement.addClass('status-connected');
+      } else if (error) {
+        statusElement.addClass('status-error');
+      }
+  }
+}
+
+// === P5 Draw Loop (Visuals) ===
 
 function draw() {
   background(0);
@@ -338,71 +465,4 @@ function switchCamera() {
   stopVideo();
   facingMode = facingMode === "user" ? "environment" : "user";
   setTimeout(setupCamera, 500);
-}
-
-/* --- Bluetooth Logic --- */
-
-async function connectBluetooth() {
-  try {
-    bluetoothDevice = await navigator.bluetooth.requestDevice({
-      filters: [{ namePrefix: "BBC micro:bit" }],
-      optionalServices: [UART_SERVICE_UUID]
-    });
-
-    const server = await bluetoothDevice.gatt.connect();
-    const service = await server.getPrimaryService(UART_SERVICE_UUID);
-    rxCharacteristic = await service.getCharacteristic(UART_RX_CHARACTERISTIC_UUID);
-    txCharacteristic = await service.getCharacteristic(UART_TX_CHARACTERISTIC_UUID);
-
-    isConnected = true;
-    bluetoothStatus = "연결됨: " + bluetoothDevice.name;
-    updateBluetoothStatusUI(true);
-    
-  } catch (error) {
-    console.error("Connection failed", error);
-    bluetoothStatus = "연결 실패";
-    updateBluetoothStatusUI(false, true);
-  }
-}
-
-function disconnectBluetooth() {
-  if (bluetoothDevice && bluetoothDevice.gatt.connected) {
-    bluetoothDevice.gatt.disconnect();
-  }
-  isConnected = false;
-  bluetoothStatus = "연결 해제됨";
-  rxCharacteristic = null;
-  txCharacteristic = null;
-  bluetoothDevice = null;
-  updateBluetoothStatusUI(false);
-}
-
-function updateBluetoothStatusUI(connected = false, error = false) {
-  const statusElement = select('#bluetoothStatus');
-  if(statusElement) {
-      statusElement.html(`상태: ${bluetoothStatus}`);
-      statusElement.removeClass('status-connected');
-      statusElement.removeClass('status-error');
-      
-      if (connected) {
-        statusElement.addClass('status-connected');
-      } else if (error) {
-        statusElement.addClass('status-error');
-      }
-  }
-}
-
-async function sendBluetoothData(data) {
-  if (!rxCharacteristic || !isConnected) return;
-  if (isSendingData) return;
-
-  try {
-    isSendingData = true;
-    const encoder = new TextEncoder();
-    await rxCharacteristic.writeValue(encoder.encode(data + "\n"));
-  } catch (error) {
-    console.error("Error sending data:", error);
-  } finally {
-    isSendingData = false;
-  }
 }
