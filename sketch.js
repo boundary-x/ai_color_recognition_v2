@@ -1,12 +1,16 @@
 /**
  * sketch.js
  * Boundary X Teachable Color Machine
- * Supports: Bluetooth (BLE) & USB Serial (Web Serial API)
- * Protocol: I{id}R{rrr}G{ggg}B{bbb} (e.g., I1R255G000B000)
- * Update: Added Throttling (0.1s interval) to prevent LED flickering
+ * * Features:
+ * 1. Dual Connection: Supports Bluetooth (BLE) & USB Serial (Web Serial API)
+ * 2. Android Tablet Fix: Added Vendor ID filter for Web Serial
+ * 3. Anti-Flicker: Throttling data transmission (100ms interval)
+ * * Protocol: I{id}R{rrr}G{ggg}B{bbb} (e.g., I1R255G000B000)
  */
 
-// Bluetooth UUIDs
+// === 1. Global Variables ===
+
+// Bluetooth UUIDs (Nordic UART Service)
 const UART_SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
 const UART_TX_CHARACTERISTIC_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
 const UART_RX_CHARACTERISTIC_UUID = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
@@ -25,15 +29,15 @@ let serialWriter;
 let isSerialConnected = false;
 let serialStatus = "연결 대기 중";
 
-// ML Variables
+// ML & Logic Variables
 let video;
 let knnClassifier;
 let currentRGB = [0, 0, 0];
 let isPredicting = false; 
 
-// [핵심 수정] 데이터 전송 속도 제한(Throttling) 변수
+// Throttling Variables (데이터 전송 속도 제한)
 let lastSentTime = 0;
-const SEND_INTERVAL = 100; // 100ms (0.1초) 마다 전송
+const SEND_INTERVAL = 100; // 0.1초(100ms) 간격으로만 전송
 
 // ID Mapping System
 let nextClassId = 1; 
@@ -47,9 +51,11 @@ let connectBluetoothButton, disconnectBluetoothButton;
 let connectSerialBtn, disconnectSerialBtn; 
 let startRecognitionButton, stopRecognitionButton; 
 
-// Camera
+// Camera Settings
 let facingMode = "user";
 let isFlipped = false;
+
+// === 2. Setup & UI ===
 
 function setup() {
   let canvas = createCanvas(400, 300);
@@ -85,7 +91,7 @@ function stopVideo() {
 }
 
 function createUI() {
-  // DOM Selectors
+  // Select DOM Elements
   classInput = select('#class-input');
   addClassBtn = select('#add-class-btn');
   classListContainer = select('#class-list');
@@ -95,7 +101,7 @@ function createUI() {
   resultConfidence = select('#result-confidence');
   btDataDisplay = select('#bluetooth-data-display');
 
-  // Input Events
+  // Event Listeners for Input
   addClassBtn.mousePressed(addNewClass);
   classInput.elt.addEventListener("keypress", (e) => {
       if (e.key === "Enter") addNewClass();
@@ -103,7 +109,7 @@ function createUI() {
   
   resetBtn.mousePressed(resetModel);
 
-  // 1. Camera Buttons
+  // Camera Control Buttons
   flipButton = createButton("좌우 반전");
   flipButton.parent('camera-control-buttons');
   flipButton.addClass('start-button');
@@ -114,7 +120,7 @@ function createUI() {
   switchCameraButton.addClass('start-button');
   switchCameraButton.mousePressed(switchCamera);
 
-  // 2. Bluetooth Buttons
+  // Bluetooth Buttons
   connectBluetoothButton = createButton("BT 연결 (무선)");
   connectBluetoothButton.parent('bluetooth-control-buttons');
   connectBluetoothButton.addClass('start-button');
@@ -125,7 +131,7 @@ function createUI() {
   disconnectBluetoothButton.addClass('stop-button');
   disconnectBluetoothButton.mousePressed(disconnectBluetooth);
 
-  // 3. Serial (USB) Buttons
+  // Serial (USB) Buttons
   connectSerialBtn = createButton("USB 연결 (유선)");
   connectSerialBtn.parent('serial-control-buttons');
   connectSerialBtn.addClass('start-button');
@@ -136,7 +142,7 @@ function createUI() {
   disconnectSerialBtn.addClass('stop-button');
   disconnectSerialBtn.mousePressed(disconnectSerial);
 
-  // 4. Recognition Control Buttons
+  // Recognition Buttons
   startRecognitionButton = createButton("컬러 인식 시작");
   startRecognitionButton.parent('recognition-control-buttons');
   startRecognitionButton.addClass('start-button');
@@ -147,11 +153,12 @@ function createUI() {
   stopRecognitionButton.addClass('stop-button');
   stopRecognitionButton.mousePressed(stopClassify);
 
+  // Initialize UI Status
   updateBluetoothStatusUI();
   updateSerialStatusUI();
 }
 
-// === Logic: Class Management ===
+// === 3. Class Management Logic ===
 
 function addNewClass() {
     const className = classInput.value().trim();
@@ -229,7 +236,7 @@ function resetModel() {
     }
 }
 
-// === Logic: Classification Control ===
+// === 4. Classification & Data Sending Logic ===
 
 function startClassify() {
     if (knnClassifier.getNumLabels() <= 0) {
@@ -249,6 +256,7 @@ function stopClassify() {
     resultLabel.style('color', '#666');
     resultConfidence.html("");
     
+    // [중요] Stop 명령을 블루투스와 시리얼 모두에게 전송
     sendBluetoothData("stop");
     sendSerialData("stop");
     
@@ -263,7 +271,7 @@ function classify() {
     knnClassifier.classify(currentRGB, gotResults);
 }
 
-// [중요 수정] 결과를 처리하고 하드웨어로 전송하는 함수
+// [핵심] 결과 처리 및 쓰로틀링(속도제한) 적용
 function gotResults(error, result) {
     if (error) {
         console.error(error);
@@ -275,38 +283,39 @@ function gotResults(error, result) {
         const confidence = result.confidencesByLabel[labelId] * 100;
         const name = idToNameMap[labelId] || "알 수 없음";
 
-        // 화면 UI는 항상 빠르게 갱신 (반응성 유지)
+        // 화면 UI는 실시간 업데이트 (사용자 경험을 위해)
         resultLabel.html(`ID ${labelId} (${name})`);
         resultLabel.style('color', '#000');
         resultConfidence.html(`정확도: ${confidence.toFixed(0)}%`);
 
-        // 하드웨어 전송은 조건 충족 시에만 수행
+        // 하드웨어 전송은 조건부 실행
         if (isPredicting && confidence > 60) {
              
-             // [스로틀링 적용] 현재 시간 확인
+             // [스로틀링] 현재 시간 체크
              let now = millis();
              
-             // 마지막 전송 후 100ms(0.1초)가 지났는지 확인
+             // 마지막 전송 후 0.1초(100ms)가 지났을 때만 전송
              if (now - lastSentTime > SEND_INTERVAL) {
                  
+                 // 3자리 패딩 (000 ~ 255)
                  let r = String(currentRGB[0]).padStart(3, '0');
                  let g = String(currentRGB[1]).padStart(3, '0');
                  let b = String(currentRGB[2]).padStart(3, '0');
                  
+                 // 프로토콜 생성
                  let dataToSend = `I${labelId}R${r}G${g}B${b}`;
                  
-                 // 두 가지 방식 모두 전송
+                 // 연결된 모든 기기에 전송
                  sendBluetoothData(dataToSend);
                  sendSerialData(dataToSend);
                  
                  btDataDisplay.html(`전송됨: ${dataToSend}`);
                  btDataDisplay.style('color', '#0f0');
 
-                 // 마지막 전송 시간 갱신
+                 // 전송 시간 갱신
                  lastSentTime = now;
              }
         } else {
-             // 정확도가 낮으면 전송하지 않음
              btDataDisplay.html(`전송 대기 (정확도 낮음)`);
              btDataDisplay.style('color', '#666');
         }
@@ -317,7 +326,7 @@ function gotResults(error, result) {
     }
 }
 
-// === P5 Draw Loop ===
+// === 5. P5 Draw Loop ===
 
 function draw() {
   background(0);
@@ -384,7 +393,7 @@ function switchCamera() {
   setTimeout(setupCamera, 500);
 }
 
-/* --- Bluetooth Logic (Web Bluetooth) --- */
+/* === 6. Bluetooth Logic (Web Bluetooth API) === */
 
 async function connectBluetooth() {
   try {
@@ -435,7 +444,7 @@ function updateBluetoothStatusUI(connected = false, error = false) {
 
 async function sendBluetoothData(data) {
   if (!rxCharacteristic || !isConnected) return;
-  if (isSendingData) return;
+  if (isSendingData) return; // 블루투스 자체 전송 중복 방지
 
   try {
     isSendingData = true;
@@ -448,7 +457,7 @@ async function sendBluetoothData(data) {
   }
 }
 
-/* --- Serial Logic (Web Serial API) --- */
+/* === 7. Serial Logic (Web Serial API & Android Fix) === */
 
 async function connectSerial() {
   if (!navigator.serial) {
@@ -457,8 +466,17 @@ async function connectSerial() {
   }
 
   try {
-    serialPort = await navigator.serial.requestPort();
-    await serialPort.open({ baudRate: 115200 }); // 마이크로비트 기본 115200
+    // [안드로이드 호환성 픽스] Vendor ID 필터 추가
+    // 0x0D28은 BBC micro:bit의 공통 Vendor ID입니다.
+    const filters = [
+      { usbVendorId: 0x0d28 } 
+    ];
+
+    // 필터를 적용하여 포트 요청 (안드로이드 인식률 향상)
+    serialPort = await navigator.serial.requestPort({ filters });
+    
+    // 마이크로비트 기본 속도인 115200으로 포트 열기
+    await serialPort.open({ baudRate: 115200 });
 
     const textEncoder = new TextEncoderStream();
     const writableStreamClosed = textEncoder.readable.pipeTo(serialPort.writable);
@@ -470,8 +488,14 @@ async function connectSerial() {
 
   } catch (error) {
     console.error("Serial Connection Failed:", error);
-    serialStatus = "연결 실패 (취소됨)";
-    updateSerialStatusUI(false, true);
+    
+    // 필터 문제로 장치를 못 찾을 경우 힌트 제공
+    if (error.name === "NotFoundError") {
+        alert("기기를 찾을 수 없습니다.\n1. 케이블이 OTG인지 확인하세요.\n2. 마이크로비트 펌웨어가 최신인지 확인하세요.");
+    } else {
+        serialStatus = "연결 실패 (취소됨)";
+        updateSerialStatusUI(false, true);
+    }
   }
 }
 
@@ -504,6 +528,7 @@ function updateSerialStatusUI(connected = false, error = false) {
 async function sendSerialData(data) {
   if (serialWriter && isSerialConnected) {
     try {
+      // 줄바꿈 문자(\n)를 포함하여 전송
       await serialWriter.write(data + "\n");
     } catch (e) {
       console.error("Serial Write Error:", e);
