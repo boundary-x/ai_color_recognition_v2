@@ -1,4 +1,4 @@
-/* style.css - Boundary X: Color Recognition (Final) */
+/* style.css - Boundary X: Color Recognition (Responsive & Sticky) */
 
 :root {
   /* Palette */
@@ -48,6 +48,7 @@ header {
   position: sticky;
   top: 0;
   z-index: 100;
+  transition: padding 0.3s ease;
 }
 
 .title {
@@ -57,11 +58,13 @@ header {
   display: flex;
   align-items: center;
   gap: 12px;
+  transition: font-size 0.3s ease;
 }
 
 .title img {
   height: 28px;
   width: auto;
+  transition: height 0.3s ease;
 }
 
 .back-button {
@@ -295,17 +298,26 @@ button {
   border-radius: var(--radius-pill);
   flex: 1;
   min-width: 120px;
+  transition: all 0.2s;
 }
 
 .start-button {
   background-color: var(--primary);
   color: white;
 }
+.start-button:hover {
+  background-color: var(--primary-hover);
+  transform: translateY(-2px);
+}
 
 .stop-button {
   background-color: white;
   color: var(--danger);
   border: 1px solid var(--border-color);
+}
+.stop-button:hover {
+  background-color: #FFF5F5;
+  border-color: var(--danger);
 }
 
 .reset-button {
@@ -447,7 +459,9 @@ address {
   color: #666;
 }
 
-/* --- PC & Tablet Layout --- */
+/* --- RESPONSIVE LAYOUT SYSTEM --- */
+
+/* 1. PC & Tablet (Common) */
 @media (min-width: 768px) {
   main {
     flex-direction: row;       
@@ -465,13 +479,8 @@ address {
   .controls { flex: 1; }
 }
 
-/* --- Mobile Layout (Fixes) --- */
+/* 2. Mobile Common Styles (Typography & Sizes) */
 @media (max-width: 767px) {
-  main { 
-    padding: 1rem 1rem !important; 
-    gap: 1rem !important;
-  }
-
   .title {
     font-size: 1rem !important;
     gap: 8px !important;
@@ -480,30 +489,9 @@ address {
     height: 22px !important;
   }
 
-  .canvas-container {
-    width: 100% !important;            
-    max-width: 260px !important; 
-    margin: 0 auto !important;   
-    margin-bottom: 10px !important;    
-  }
-
-  .controls { 
-    width: 100%; 
-    padding-bottom: 2rem; 
-  }
-
-  .control-group { padding: 1rem !important; }
+  .control-group { padding: 1.5rem 1rem !important; }
   
-  .button-group { 
-    flex-direction: column !important; 
-  }
-  
-  button { 
-    width: 100% !important; 
-    flex: none !important; 
-  }
-
-  /* Input & Add Button Fix */
+  /* Input & Button Fixes for Mobile */
   .input-group {
     display: flex !important;
     flex-wrap: nowrap !important;
@@ -513,23 +501,18 @@ address {
   }
   
   #class-input {
-    flex: 1 1 auto !important; 
-    min-width: 0 !important; 
-    width: 0 !important; 
     padding: 0 10px !important;
     height: 40px !important; 
     font-size: 14px !important;
   }
   
   .add-button {
-    width: auto !important; 
-    flex: 0 0 auto !important; 
     padding: 0 1rem !important;
     height: 40px !important; 
     font-size: 14px !important;
   }
 
-  /* List Fix */
+  /* List Fixes */
   .train-btn-row {
     padding: 0 !important; 
     height: 42px !important; 
@@ -558,20 +541,75 @@ address {
     text-overflow: ellipsis;
   }
 
-  .train-count {
-    font-size: 11px !important;
-    padding: 1px 5px !important;
-  }
-
   .delete-class-btn {
     width: 40px !important; 
-    height: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
     font-size: 18px !important;
   }
+}
+
+
+@media (max-width: 767px) and (orientation: portrait) {
+  header { padding: 0.8rem 1rem; }
   
-  /* Footer Mobile */
-  .footer-top { flex-direction: column; gap: 2rem; }
-  .footer-links { gap: 2rem; flex-direction: column; }
+  main { 
+    padding: 1rem !important; 
+    gap: 1.5rem !important;
+  }
+
+
+  .canvas-container {
+    width: 100% !important;            
+    max-width: 100% !important; 
+    margin: 0 auto !important;   
+    margin-bottom: 10px !important; 
+    
+    position: sticky;        
+    top: 70px;               
+    z-index: 90;             
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5); 
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .controls { width: 100%; padding-bottom: 2rem; }
+  .button-group { flex-direction: column !important; }
+  button { width: 100% !important; flex: none !important; }
+  
+  .footer-top { flex-direction: column; gap: 3rem; }
+  .footer-links { gap: 2.5rem; flex-direction: column; }
+}
+
+
+@media (max-width: 900px) and (orientation: landscape) {
+  header { padding: 0.5rem 1rem; }
+  
+  main {
+    flex-direction: row !important;
+    align-items: flex-start !important;
+    padding: 1rem !important;
+    gap: 1.5rem !important;
+  }
+
+
+  .canvas-container {
+    position: sticky;         
+    top: 80px;
+    z-index: 90;
+    
+    width: 45% !important;
+    min-width: 280px !important;
+    max-width: none !important;
+    margin-bottom: 0 !important;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2); 
+  }
+  
+  .controls {
+    flex: 1;                  
+    width: 50%;
+    padding-bottom: 2rem;
+  }
+
+  .button-group { flex-direction: row !important; } 
+  button { flex: 1 !important; }
+
+  footer { display: none; } 
 }
