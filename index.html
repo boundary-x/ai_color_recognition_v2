@@ -1,94 +1,20 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>바운더리엑스 AI 컬러인식</title>
-  
-  <link rel="icon" href="https://raw.githubusercontent.com/boundary-x/ai_teachable_machine/refs/heads/main/Favicon.png"/> 
-  
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.dom.min.js"></script>
-  <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js"></script>
-  
-  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
-  <link rel="stylesheet" type="text/css" href="style.css">
-</head>
-
-<body>
-  <header>
-    <div class="title">
-      <a href="https://boundaryx.io">
-        <img src="https://raw.githubusercontent.com/boundary-x/ai_voice_recognition/refs/heads/main/boundaryx_logo.png" alt="Logo">
-      </a>
-      AI 컬러인식
-    </div>
-    <a href="https://boundaryx.io/59" class="back-button">돌아가기</a>
-  </header>
-
-  <main>
-    <div id="p5-container" class="canvas-container"></div>
-    
-    <section class="controls">
-      
-      <div class="control-group">
-        <h3>학습 ID 추가</h3>
-        <p>색상 이름(예: 사과)을 입력하고 추가 버튼을 눌러 학습하세요.</p>
-        
-        <div class="input-group">
-          <input type="text" id="class-input" placeholder="이름 입력 (예: 빨강)">
-          <button id="add-class-btn" class="add-button">추가</button>
-        </div>
-
-        <div id="class-list" class="class-list-container"></div>
-        
-        <button id="reset-model-btn" class="reset-button">🗑️ 모델 초기화</button>
-      </div>
-
-      <div class="control-group">
-        <h3>🧠 AI 판단 결과</h3>
-        <div class="data-info-box">
-          <p class="info-title"><strong>인식 결과</strong></p>
-          <div id="result-label" class="ai-result">데이터 없음</div>
-          <div id="result-confidence" class="ai-confidence">정확도: 0%</div>
-        </div>
-        <div id="bluetooth-data-display" class="data-display">전송 데이터: 대기 중...</div>
-      </div>
-
-      <div class="control-group">
-        <h3>1. 카메라 설정</h3>
-        <p>카메라 버튼을 통해 화면을 설정해주세요.</p>
-        <div id="camera-control-buttons" class="button-group"></div>
-      </div>
-
-      <div class="control-group">
-        <h3>2. 기기 연결</h3>
-        <p>블루투스(무선) 또는 USB 케이블(유선)을 연결하세요.</p>
-        
-        <div id="bluetoothStatus" style="margin-top: 10px; font-weight:600;">블루투스: 연결 대기 중</div>
-        <div id="bluetooth-control-buttons" class="button-group" style="margin-top: 0.5rem; margin-bottom: 1.5rem;"></div>
-
-        <div id="serialStatus" style="margin-top: 10px; border-top: 1px solid #ddd; padding-top:15px; font-weight:600;">유선(USB): 연결 대기 중</div>
-        <div id="serial-control-buttons" class="button-group" style="margin-top: 0.5rem;"></div>
-      </div>
-
-      <div class="control-group">
-        <h3>3. 컬러 인식 제어</h3>
-        <p>시작 버튼을 눌러 AI 컬러 인식 및 데이터 전송을 시작하세요.</p>
-        <div id="recognition-control-buttons" class="button-group"></div>
-      </div>
-
-    </section>
-  </main>
-
-  <footer>
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>바운더리엑스 AI 컬러인식</title><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css"><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="color.css"><script defer src="engine.js"></script><script defer src="model.js"></script><script defer src="bluetooth.js"></script><script defer src="sketch.js"></script><link rel="stylesheet" href="support.css"><script defer src="support.js"></script></head><body>
+<header><div class="title"><a href="https://boundaryx.io"><img src="https://raw.githubusercontent.com/boundary-x/ai_voice_recognition/refs/heads/main/boundaryx_logo.png" alt="boundaryX"></a><span>AI 컬러인식</span><small>V2</small></div><div class="header-actions"><button class="help-button" data-help="" type="button">도움말</button><a class="back-button" href="https://boundaryx.io/59">돌아가기</a></div></header><main>
+<section class="camera-panel" aria-label="카메라 영상"><div class="canvas-container"><video hidden muted playsinline></video><canvas id="view" width="640" height="480" aria-label="색상 학습 및 인식 영상"></canvas><div id="camera-empty">카메라를 시작해주세요.</div><p id="roi-guide" hidden>학습할 색상을 중앙 영역에 맞춰주세요.</p><span id="camera-mode">카메라 대기</span></div><p id="camera-status" role="status"></p></section><section class="controls"><section class="control-group" id="camera-settings"><h3>카메라 설정</h3><p>카메라는 페이지를 열면 자동으로 시작됩니다. 권한을 허용하고 사용할 카메라를 선택하세요.</p><div id="camera-control-buttons"><div class="button-group"><button id="switch" class="start-button" >전후방 전환</button><button id="flip" class="start-button" >좌우 반전</button></div></div></section>
+<section class="control-group"><h3>🧠 AI 판단 결과</h3><div class="data-info-box result"><span>인식 결과</span><strong id="result">인식 대기</strong><span id="result-detail">색상을 학습하고 인식할 ID를 선택하세요.</span></div><div id="transmission" class="data-display" role="status">블루투스 연결 대기</div><details><summary>전송 데이터 안내</summary><p>선택한 ID 중 가장 큰 색상 영역 1개의 중심 좌표와 크기를 전송합니다. 좌표는 가로 400 × 세로 300 기준입니다.</p><code>i1x200y150w100h80d1</code><p>i: ID · x, y: 중심 · w, h: 크기 · d: 선택 ID 검출 수<br>미검출·인식 중지 시 stop 전송. 메시지 끝에 줄바꿈이 붙습니다.</p></details></section>
+<section class="control-group"><h3>1. 색상 학습</h3><p>ID를 추가하고 중앙 사각형을 한 가지 색으로 채우세요. 한 번 누를 때마다 샘플 1개가 수집됩니다.</p><button id="add" class="start-button" >+ 학습 ID 추가</button><div id="classes"></div><div id="training" class="data-info-box" hidden><h4 id="training-title"></h4><p id="quality">카메라를 시작해주세요.</p><div class="sample-progress"><span id="swatch" class="swatch"></span><strong id="count">0 / 10개</strong></div><progress id="progress" max="10" value="0" aria-label="학습 샘플 수"></progress><div class="button-group"><button id="sample" class="start-button" disabled>샘플 추가</button><button id="undo" class="start-button" disabled>마지막 샘플 취소</button></div><div class="button-group"><button id="finish" class="start-button" disabled>학습 완료</button><button id="cancel" class="start-button" >취소</button></div><p>각도와 거리를 조금씩 바꾸며 10개를 수집하세요. 여러 색이 섞인 샘플은 수집되지 않습니다.</p></div><p id="training-status" role="status">ID마다 10개의 샘플을 수집해야 인식할 수 있습니다.</p><button id="reset" class="start-button" disabled>데이터 초기화</button></section>
+<section class="control-group"><h3>2. 모델 저장 · 가져오기</h3><p>학습 데이터를 JSON 파일로 보관하거나 공유하세요. 가져오면 현재 데이터를 교체합니다.</p><div class="button-group" id="model-file-buttons"><button id="download" class="start-button" disabled>모델 다운로드</button><button id="share" class="start-button" disabled>파일 공유</button><button id="import" class="start-button" >모델 가져오기</button></div><input id="model-file" type="file" accept=".json,application/json" hidden><p id="file-status" role="status">원본 영상은 저장하지 않습니다. 새로고침 전에 모델을 다운로드하세요.</p></section>
+<section class="control-group"><h3>3. 기기 연결</h3><p>마이크로비트를 블루투스로 연결하면 인식 결과가 전송됩니다.</p><div id="bluetoothStatus" role="status">연결 대기 중</div><div class="button-group" id="connection-buttons"><button id="connect" class="start-button" >블루투스 연결</button><button id="disconnect" class="start-button" disabled>연결 해제</button></div></section>
+<section class="control-group"><h3>4. 색상 인식</h3><label for="target">인식할 ID</label><select id="target"><option value="">학습한 ID를 선택하세요</option></select><p>선택한 ID만 화면 전체에서 인식합니다. 굵은 파란색 박스는 전송 대상, 얇은 초록색 박스는 나머지 영역입니다.</p><div class="button-group" id="recognition-buttons"><button id="start" class="start-button" disabled>인식 시작</button><button id="stop" class="start-button" disabled>인식 중지</button></div><details><summary>인식 세부 조절</summary><label for="match">색상 허용 차이 <output id="match-value">8</output></label><input id="match" type="range" min="2" max="30" value="8"><label for="light">밝기 허용 차이 <output id="light-value">15</output></label><input id="light" type="range" min="0" max="40" value="15"><label for="size">최소 영역 크기 <output id="size-value">1.0%</output></label><input id="size" type="range" min="1" max="50" value="10"><p>배경까지 인식되면 색상 허용 차이를 낮추세요. 작은 잡음은 최소 영역 크기를 높여 줄일 수 있습니다.</p><button id="defaults" class="start-button" >기본값 복원</button></details></section>
+<details id="support-card" class="control-group"></details>
+</section></main><footer>
     <div class="footer-container">
       <div class="footer-top">
         <div class="footer-info">
           <h2 class="footer-logo">바운더리엑스</h2>
           <p class="slogan">"우리는 산업과 교육의 경계를 허물고, 미래 기술을 교실의 책상 위로 옮기는 사람들입니다"</p>
           <address>
-            <p>경기도 화성시 동탄첨단산업1로 57 동탄2인큐베이팅센터, 7층 706호</p>
+            <p>경기도 화성시 동탄첨단산업1로 동탄2인큐베이팅센터 7층, 706호</p>
             <p class="copyright">© 2024 Boundary X Co. All rights reserved.</p>
           </address>
         </div>
@@ -120,9 +46,4 @@
         </div>
       </div>
     </div>
-  </footer>
-
-  <script src="sketch.js"></script>
-</body>
-</html>
-
+  </footer></body></html>
